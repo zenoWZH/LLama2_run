@@ -56,7 +56,7 @@ class LLMFinetuner:
         ################################################################################
 
         # Output directory where the model predictions and checkpoints will be stored
-        output_dir = "./results"
+        self.output_dir = "./results"
 
         # Number of training epochs
         num_train_epochs = 1
@@ -225,7 +225,7 @@ class LLMFinetuner:
         filename = f"{model_short_name}_{dataset_short_name}_timing_log.txt"
         
         print(message.strip())
-        with open(filename, "a") as file:
+        with open(self.output_dir+filename, "w") as file:
             file.write(message)
 
     def train(self):
