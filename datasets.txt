@@ -1,0 +1,3 @@
+mlabonne/guanaco-llama2-1k
+timdettmers/openassistant-guanaco
+cais/mmlu
