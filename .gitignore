@@ -5,3 +5,5 @@
 /results/**/*.txt
 
 **/*.pyc
+
+/__pycache__/*
