@@ -1,15 +1,14 @@
 [tool.poetry]
-name = "yival"
+name = "yival_benchmark"
 version = "0.0.0"
 description = "YiVal is an open-source project designed to revolutionize the way developers and researchers evaluate and refine AI models."
 authors = [
+  "Zhouhao Wang <orzwang@ucdavis.edu>",
   "Tao Feng <taofeng.nju@gmail.com>",
   "Yan QiDong <yanqd0@outlook.com>",
 ]
 license = "Apachev2"
 readme = "README.md"
-
-packages = [{ include = "yival", from = "src" }]
 
 [tool.poetry.scripts]
 yival = 'yival.__main__:main'
