@@ -211,6 +211,7 @@ class LLMFinetuner:
             warmup_ratio=warmup_ratio,
             group_by_length=group_by_length,
             lr_scheduler_type=lr_scheduler_type,
+            logging_dir=self.output_dir+"logs",
         )
         
     def _log_time(self, prefix, seconds):
@@ -243,7 +244,6 @@ class LLMFinetuner:
             tokenizer=self.tokenizer,
             packing=self.packing,
             dataset_text_field='text',
-            logging_dir=self.output_dir+"logs",
         )
         trainer.train()
         self.training_time = time.time() - start_time
