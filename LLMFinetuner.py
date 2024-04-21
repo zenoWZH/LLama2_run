@@ -243,6 +243,7 @@ class LLMFinetuner:
             tokenizer=self.tokenizer,
             packing=self.packing,
             dataset_text_field='text',
+            logging_dir=self.output_dir+"logs",
         )
         trainer.train()
         self.training_time = time.time() - start_time
