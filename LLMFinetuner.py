@@ -209,7 +209,6 @@ class LLMFinetuner:
             warmup_ratio=warmup_ratio,
             group_by_length=group_by_length,
             lr_scheduler_type=lr_scheduler_type,
-            report_to="tensorboard"
         )
 
         self.model_loading_time = time.time() - start_time
