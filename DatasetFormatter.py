@@ -1,5 +1,5 @@
 from datasets import load_dataset, concatenate_datasets
-class DatasetFormater:
+class DatasetFormatter:
     def __init__(self, dataset_name):
         self.dataset_name = dataset_name
         return

@@ -13,16 +13,19 @@ from transformers import (
     TrainingArguments,
     pipeline,
     logging,
+    Trainer,
+    DataCollatorForLanguageModeling,
 )
-from peft import LoraConfig, PeftModel
+from peft import LoraConfig, get_peft_model
 from trl import SFTTrainer
-import DatasetFormatter
+from DatasetFormatter import DatasetFormatter
 class LLMFinetuner:
     def __init__(self, model_name, dataset_name, access_token, **training_args):
         self.model_name = model_name
         self.dataset_name = dataset_name
-        # Select formatting function based on dataset name
         
+        # Output directory where the model predictions and checkpoints will be stored
+        self.output_dir = "./results/"
         ################################################################################
         # QLoRA parameters
         ################################################################################
@@ -55,9 +58,6 @@ class LLMFinetuner:
         ################################################################################
         # TrainingArguments parameters
         ################################################################################
-
-        # Output directory where the model predictions and checkpoints will be stored
-        self.output_dir = "./results"
 
         # Number of training epochs
         num_train_epochs = 1
@@ -129,6 +129,8 @@ class LLMFinetuner:
                 
         self.dataset_loader = DatasetFormatter(self.dataset_name)
         self.dataset_loader.load_dataset()
+        
+        start_time = time.time()
         self.formatted_dataset = self.dataset_loader.format_dataset()
 
         # Load tokenizer and model with QLoRA configuration
@@ -141,12 +143,11 @@ class LLMFinetuner:
             bnb_4bit_use_double_quant=use_nested_quant,
         )
         
-        start_time = time.time()
         # Load LLaMA tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, token=access_token)
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.tokenizer.padding_side = "right" # Fix weird overflow issue with fp16 training
-        self.tokenized_dataset = self.formatted_dataset.map(lambda examples: tokenizer(examples["text"]), batched=True)
+        #self.tokenized_dataset = self.formatted_dataset.map(lambda examples: self.tokenizer(examples["text"]), batched=True)
         self.data_loading_time = time.time() - start_time
         self._log_time('Dataset preparing time', self.data_loading_time)
         ################################################################################
@@ -158,9 +159,7 @@ class LLMFinetuner:
         if compute_dtype == torch.float16 and use_4bit:
             major, _ = torch.cuda.get_device_capability()
             if major >= 8:
-                print("=" * 80)
                 print("Your GPU supports bfloat16: accelerate training with bf16=True")
-                print("=" * 80)
         
         # Load base model
         self.model = AutoModelForCausalLM.from_pretrained(
@@ -190,7 +189,10 @@ class LLMFinetuner:
                 "lm_head",
                 ],
         )
-
+        #self.peft_model = get_peft_model(self.model, self.peft_config)
+        self.model_loading_time = time.time() - start_time
+        self._log_time('Model loading time', self.model_loading_time)
+        
         # Set training parameters
         self.training_arguments = TrainingArguments(
             output_dir=self.output_dir,
@@ -210,15 +212,6 @@ class LLMFinetuner:
             group_by_length=group_by_length,
             lr_scheduler_type=lr_scheduler_type,
         )
-
-        self.model_loading_time = time.time() - start_time
-        self._log_time('Model loading time', self.model_loading_time)
-
-    def custom_format_dataset(self, dataset_name):
-        # Define different formatting functions for different datasets
-        if dataset_name == "cais/mmlu" :
-            from DatasetFormatter import mmlu_formatting
-            return mmlu_formatting
         
     def _log_time(self, prefix, seconds):
         # Calculate time format
@@ -243,11 +236,13 @@ class LLMFinetuner:
         # Set supervised fine-tuning parameters
         trainer = SFTTrainer(
             model=self.model,
-            train_dataset=self.tokenized_dataset,
             peft_config=self.peft_config,
-            max_seq_length=self.max_seq_length,
+            train_dataset=self.formatted_dataset,
             args=self.training_arguments,
+            max_seq_length=self.max_seq_length,
+            tokenizer=self.tokenizer,
             packing=self.packing,
+            dataset_text_field='text',
         )
         trainer.train()
         self.training_time = time.time() - start_time

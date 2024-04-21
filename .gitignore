@@ -1,0 +1,7 @@
+# 忽略run文件夹下的所有文件
+/results/runs/*
+
+# 忽略results文件夹及其所有子文件夹中的txt文件
+/results/**/*.txt
+
+**/*.pyc
