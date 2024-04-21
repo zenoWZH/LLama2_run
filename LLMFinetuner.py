@@ -16,12 +16,13 @@ from transformers import (
 )
 from peft import LoraConfig, PeftModel
 from trl import SFTTrainer
-
+import DatasetFormatter
 class LLMFinetuner:
     def __init__(self, model_name, dataset_name, access_token, **training_args):
         self.model_name = model_name
         self.dataset_name = dataset_name
-
+        # Select formatting function based on dataset name
+        
         ################################################################################
         # QLoRA parameters
         ################################################################################
@@ -124,10 +125,11 @@ class LLMFinetuner:
         ################################################################################
         # Load the dataset
         ################################################################################
-        start_time = time.time()
-        self.data_loading_time = time.time() - start_time
         # Load dataset (you can process it here)
-        self.dataset = load_dataset(dataset_name, split="train")
+                
+        self.dataset_loader = DatasetFormatter(self.dataset_name)
+        self.dataset_loader.load_dataset()
+        self.formatted_dataset = self.dataset_loader.format_dataset()
 
         # Load tokenizer and model with QLoRA configuration
         compute_dtype = getattr(torch, bnb_4bit_compute_dtype)
@@ -138,8 +140,15 @@ class LLMFinetuner:
             bnb_4bit_compute_dtype=compute_dtype,
             bnb_4bit_use_double_quant=use_nested_quant,
         )
-        self._log_time('Dataset loading time', self.data_loading_time)
         
+        start_time = time.time()
+        # Load LLaMA tokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, token=access_token)
+        self.tokenizer.pad_token = self.tokenizer.eos_token
+        self.tokenizer.padding_side = "right" # Fix weird overflow issue with fp16 training
+        self.tokenized_dataset = self.formatted_dataset.map(lambda examples: tokenizer(examples["text"]), batched=True)
+        self.data_loading_time = time.time() - start_time
+        self._log_time('Dataset preparing time', self.data_loading_time)
         ################################################################################
         # Load the model
         ################################################################################
@@ -163,11 +172,6 @@ class LLMFinetuner:
         self.model.config.use_cache = False
         self.model.config.pretraining_tp = 1
 
-        # Load LLaMA tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, token=access_token)
-        self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.tokenizer.padding_side = "right" # Fix weird overflow issue with fp16 training
-
         # Load LoRA configuration
         self.peft_config = LoraConfig(
             lora_alpha=lora_alpha,
@@ -189,7 +193,7 @@ class LLMFinetuner:
 
         # Set training parameters
         self.training_arguments = TrainingArguments(
-            output_dir=output_dir,
+            output_dir=self.output_dir,
             num_train_epochs=num_train_epochs,
             per_device_train_batch_size=per_device_train_batch_size,
             gradient_accumulation_steps=gradient_accumulation_steps,
@@ -210,6 +214,12 @@ class LLMFinetuner:
 
         self.model_loading_time = time.time() - start_time
         self._log_time('Model loading time', self.model_loading_time)
+
+    def custom_format_dataset(self, dataset_name):
+        # Define different formatting functions for different datasets
+        if dataset_name == "cais/mmlu" :
+            from DatasetFormatter import mmlu_formatting
+            return mmlu_formatting
         
     def _log_time(self, prefix, seconds):
         # Calculate time format
@@ -234,11 +244,9 @@ class LLMFinetuner:
         # Set supervised fine-tuning parameters
         trainer = SFTTrainer(
             model=self.model,
-            train_dataset=self.dataset,
+            train_dataset=self.tokenized_dataset,
             peft_config=self.peft_config,
-            dataset_text_field="text",
             max_seq_length=self.max_seq_length,
-            tokenizer=self.tokenizer,
             args=self.training_arguments,
             packing=self.packing,
         )
