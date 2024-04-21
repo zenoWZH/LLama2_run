@@ -4,7 +4,7 @@ import time
 #from datasets import load_dataset
 import os
 import torch
-from datasets import load_dataset
+from datasets import load_dataset, DatasetDict
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -131,18 +131,29 @@ class LLMFinetuner:
         self.dataset_loader.load_dataset()
         
         start_time = time.time()
-        self.formatted_dataset = self.dataset_loader.format_dataset()
+        formatted_dataset = self.dataset_loader.format_dataset()
+        print(formatted_dataset)
+        if formatted_dataset is not None and not ('train' in formatted_dataset.column_names):
+            # 数据集通常包含训练和测试集，但如果需要自定义比例，可以使用以下方法
+            train_test_split = formatted_dataset.train_test_split(test_size=0.1)
 
-        # Load tokenizer and model with QLoRA configuration
-        compute_dtype = getattr(torch, bnb_4bit_compute_dtype)
-
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=use_4bit,
-            bnb_4bit_quant_type=bnb_4bit_quant_type,
-            bnb_4bit_compute_dtype=compute_dtype,
-            bnb_4bit_use_double_quant=use_nested_quant,
-        )
+            # 创建一个新的数据集字典，包括训练集和测试集
+            self.split_dataset = DatasetDict({
+                'train': train_test_split['train'],
+                'test': train_test_split['test']
+            })
+        elif not('test' in formatted_dataset.column_names):
+            train_test_split = formatted_dataset['train'].train_test_split(test_size=0.1)
+            self.split_dataset = DatasetDict({
+                'train': train_test_split['train'],
+                'test': train_test_split['test']
+            })
+        else:
+            self.split_dataset = formatted_dataset
+            
         
+        print(train_test_split)
+        print(self.split_dataset.keys())
         # Load LLaMA tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, token=access_token)
         self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -154,7 +165,15 @@ class LLMFinetuner:
         # Load the model
         ################################################################################
         start_time = time.time()
+        ### Load model with QLoRA configuration
+        compute_dtype = getattr(torch, bnb_4bit_compute_dtype)
 
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=use_4bit,
+            bnb_4bit_quant_type=bnb_4bit_quant_type,
+            bnb_4bit_compute_dtype=compute_dtype,
+            bnb_4bit_use_double_quant=use_nested_quant,
+        )
         # Check GPU compatibility with bfloat16
         if compute_dtype == torch.float16 and use_4bit:
             major, _ = torch.cuda.get_device_capability()
@@ -238,7 +257,8 @@ class LLMFinetuner:
         trainer = SFTTrainer(
             model=self.model,
             peft_config=self.peft_config,
-            train_dataset=self.formatted_dataset,
+            train_dataset=self.split_dataset['train'],
+            eval_dataset=self.split_dataset['test'],
             args=self.training_arguments,
             max_seq_length=self.max_seq_length,
             tokenizer=self.tokenizer,

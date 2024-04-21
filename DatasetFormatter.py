@@ -4,21 +4,21 @@ class DatasetFormatter:
         self.dataset_name = dataset_name
         return
 
-    def mmlu_formatting(example):
+    def mmlu_formatting(self, example):
         output_text = f'''### Question: {example['question']}\n 
                         ### Choices: {example['choices']}\n 
                         ### Answer: {example['answer']}'''
         return {"text":output_text}
-    def dolly_formatting(example):
+    def dolly_formatting(self, example):
         output_text = f'''### Instruction: {example['instruction']}\n 
                         ### Context: {example['context']}\n 
                         ### Answer: {example['response']}'''
         return {"text":output_text}
-    def instruct_formatting(example):
+    def instruct_formatting(self, example):
         output_text = f'''### Instruction: {example['instruction']}\n 
                         ### Answer: {example['output']}'''
         return {"text":output_text}
-    def conversation_formatting(example):
+    def conversation_formatting(self, example):
         output_text = ""
         for round in example['conversations']:
             output_text += f'''### From: {round['from']}\n 
@@ -59,30 +59,31 @@ class DatasetFormatter:
         elif self.dataset_name == "BelleGroup/test_1M_CN":
             self.dataset = load_dataset("BelleGroup/test_1M_CN",  'all')
         elif self.dataset_name == "m-a-p/COIG-CQIA":
-            self.dataset = load_dataset("m-a-p/COIG-CQIA", 'chinese_traditional')
+            self.dataset = load_dataset("m-a-p/COIG-CQIA", 'chinese_traditional', split="train")
             loadlist = ['coig_pc', 'exam', 'finance', 'douban', 'human_value', 'logi_qa', 'ruozhiba', 'segmentfault', 'wiki', 'wikihow', 'xhs', 'zhihu']
             for option in loadlist:
-                self.dataset = concatenate_datasets(self.dataset, load_dataset("m-a-p/COIG-CQIA", option))
+                self.dataset = concatenate_datasets([self.dataset, load_dataset("m-a-p/COIG-CQIA", option, split="train")])
                 
         else:
             print("Dataset name not recognized.")
             try:
                 self.dataset = load_dataset(self.dataset_name, split="train")
+                self.dataset = concatenate_datasets([self.dataset, load_dataset(self.dataset_name, split="test")])
             except BaseException as err:
                 print(err)
                 return None
     
     def format_dataset(self):
         if self.dataset_name == "cais/mmlu":
-            return self.dataset.map(self.mmlu_formatting, batched=True)
+            return self.dataset.map(self.mmlu_formatting)
         elif self.dataset_name == "databricks/databricks-dolly-15k":
-            return self.dataset.map(self.dolly_formatting, batched=True)
+            return self.dataset.map(self.dolly_formatting)
         elif self.dataset_name == "BelleGroup/train_1M_CN" \
             or self.dataset_name == "BelleGroup/train_0.5M_CN" \
                 or self.dataset_name == "m-a-p/COIG-CQIA":
-            return self.dataset.map(self.instruct_formatting, batched=True)
+            return self.dataset.map(self.instruct_formatting)
         elif self.dataset_name == "BelleGroup/train_3.5M_CN":
-            return self.dataset.map(self.conversation_formatting, batched=True)
+            return self.dataset.map(self.conversation_formatting)
         else:
             print("Dataset name not recognized.")
             return self.dataset
