@@ -28,7 +28,7 @@ def retry_finetuning(model, dataset, access_token, batch_size=8):
             print(err)
             print("Aborting fine-tuning of this model and dataset")
         else:
-            retry_finetuning(model, dataset, access_token, batch_size/2)
+            retry_finetuning(model, dataset, access_token, batch_size//2)
         
         
 default_access_token = ConfigReader("access_token.txt").read_lines_without_comments()[0]
