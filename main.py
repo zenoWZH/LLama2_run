@@ -25,7 +25,7 @@ def clear_cache():
 
 default_access_token = ConfigReader("access_token.txt").read_lines_without_comments()[0]
 
-
+print(__name__)
 #if __name__ == "__main__":
 print("START MAIN PROCESS!!!")
 print("\n")
