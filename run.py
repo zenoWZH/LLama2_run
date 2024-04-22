@@ -4,6 +4,16 @@ import time
 import sys
 from tqdm import tqdm
 import torch
+import shutil
+
+def clear_cache():
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
+    torch.cuda.empty_cache()
+    cache_dir = os.path.join(os.getcwd(), '.cache', 'huggingface')
+    if os.path.exists(cache_dir):
+        shutil.rmtree(cache_dir)
+    os.makedirs(cache_dir, exist_ok=True)
+    print("Cache cleared") 
 
 def retry_finetuning(model, dataset, batch_size=4):
     torch.cuda.empty_cache()
@@ -45,8 +55,8 @@ if __name__ == "__main__":
             if syscode == 0:
                 print("Training Successful!!!")
             else:
-                torch.cuda.empty_cache()
-                retry_finetuning(model, dataset, batch_size//2)
+                clear_cache()
+                retry_finetuning(model, dataset, batch_size)
 
             time.sleep(5)
         

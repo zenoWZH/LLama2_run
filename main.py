@@ -12,18 +12,6 @@ import asyncio
 from ConfigReader import ConfigReader
 import warnings
 
-
-def clear_cache():
-    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
-    torch.cuda.empty_cache()
-    cache_dir = os.path.join(os.getcwd(), '.cache', 'huggingface')
-    if os.path.exists(cache_dir):
-        shutil.rmtree(cache_dir)
-    os.makedirs(cache_dir, exist_ok=True)
-    print("Cache cleared")   
-
-
-
 print(__name__)
 #if __name__ == "__main__":
 print("START MAIN PROCESS!!!")
