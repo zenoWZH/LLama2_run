@@ -235,7 +235,7 @@ class LLMFinetuner:
         )
     
     def __del__(self):
-        del self.trainer, self.model, self.tokenizer, self.dataset_loader, self.split_dataset
+        del self.model, self.tokenizer, self.dataset_loader, self.split_dataset
         #sys.exit(0) vs os._exit(0)
     
     def _log_time(self, prefix, seconds):
@@ -258,24 +258,27 @@ class LLMFinetuner:
     def train(self):
         start_time = time.time()
         # Set supervised fine-tuning parameters
-        self.trainer = SFTTrainer(
-            model=self.model,
-            peft_config=self.peft_config,
-            train_dataset=self.split_dataset['train'],
-            eval_dataset=self.split_dataset['test'],
-            args=self.training_arguments,
-            max_seq_length=self.max_seq_length,
-            tokenizer=self.tokenizer,
-            packing=self.packing,
-            dataset_text_field='text',
-        )
         try:
+            self.trainer = SFTTrainer(
+                model=self.model,
+                peft_config=self.peft_config,
+                train_dataset=self.split_dataset['train'],
+                eval_dataset=self.split_dataset['test'],
+                args=self.training_arguments,
+                max_seq_length=self.max_seq_length,
+                tokenizer=self.tokenizer,
+                packing=self.packing,
+                dataset_text_field='text',
+            )
+        
             self.trainer.train()
             self.training_time = time.time() - start_time
             self._log_time('Training time', self.training_time)
             print("\n")
             print(f"Training Complete at batch={self.batch_size}")
+            del self.trainer
+    
         except BaseException as err:
-            del self.trainer, self.model, self.tokenizer, self.dataset_loader, self.split_dataset
+            del self.model, self.tokenizer, self.dataset_loader, self.split_dataset
             gc.collect()
             raise RuntimeError(err)
