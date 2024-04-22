@@ -12,15 +12,13 @@ def retry_finetuning(model, dataset, batch_size=4):
     print(f"Try again with batch_size = {batch_size}")
     print('='*80)
     print("\n")
-    os.system(f"poetry run python main.py {model} {dataset} {str(batch_size)}")
-    print("Training Successful!!!")
+    syscode = os.system(f"poetry run python main.py {model} {dataset} {str(batch_size)}")
     if syscode == 0:
             print("Training Successful!!!")
     else:
         torch.cuda.empty_cache()
         if batch_size<=1:
             print("Aborting fine-tuning of this model and dataset")
-            torch.cuda.empty_cache()
         else:
             retry_finetuning(model, dataset, batch_size//2)
         
