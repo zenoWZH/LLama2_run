@@ -16,7 +16,9 @@ from transformers import (
 )
 from peft import LoraConfig, get_peft_model
 from trl import SFTTrainer
+import asyncio
 from DatasetFormatter import DatasetFormatter
+
 class LLMFinetuner:
     def __init__(self, model_name, dataset_name, access_token, batch_size=4, **training_args):
         self.model_name = model_name
@@ -252,10 +254,9 @@ class LLMFinetuner:
         with open(self.output_dir+filename, "w") as file:
             file.write(message)
 
-    def train(self):
+    async def train(self):
         try:
             start_time = time.time()
-            
             # Set supervised fine-tuning parameters
             trainer = SFTTrainer(
                 model=self.model,
@@ -268,7 +269,7 @@ class LLMFinetuner:
                 packing=self.packing,
                 dataset_text_field='text',
             )
-            trainer.train()
+            await trainer.train()
             self.training_time = time.time() - start_time
             self._log_time('Training time', self.training_time)
             print("\n")

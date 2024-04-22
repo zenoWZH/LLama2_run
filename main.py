@@ -8,6 +8,7 @@ import gc
 import torch
 import shutil
 import time
+import asyncio
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 
@@ -45,6 +46,8 @@ def retry_finetuning(model, dataset, access_token, batch_size=4):
         
         
 default_access_token = ConfigReader("access_token.txt").read_lines_without_comments()[0]
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 4 and len(sys.argv) > 1:
         print("Usage: python main.py <model_name> <dataset_name> <access_token>")
@@ -68,6 +71,7 @@ if __name__ == "__main__":
                 try:
                     print('='*80)
                     print("\n")
+                    print(f"Training on model {model} with dataset {dataset}")
                     print("Start with batch_size = 8\n")
                     print('='*80)
                     print("\n")
