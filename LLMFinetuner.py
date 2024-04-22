@@ -23,7 +23,7 @@ class LLMFinetuner:
     def __init__(self, model_name, dataset_name, access_token, batch_size=4, **training_args):
         self.model_name = model_name
         self.dataset_name = dataset_name
-        
+        self.batch_size = batch_size
         # Output directory where the model predictions and checkpoints will be stored
         self.output_dir = "./results/"
         ################################################################################
@@ -244,7 +244,7 @@ class LLMFinetuner:
         # Use temporary variables for filename
         model_short_name = self.model_name.split('/')[-1]
         dataset_short_name = self.dataset_name.split('/')[-1]
-        filename = f"{model_short_name}_{dataset_short_name}_timing_log.txt"
+        filename = f"{model_short_name}_{dataset_short_name}_{self.batch_size}timing_log.txt"
         
         print(message.strip())
         with open(self.output_dir+filename, "w") as file:
