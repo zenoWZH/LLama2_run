@@ -62,6 +62,7 @@ if __name__ == "__main__":
         datasets = dataset_reader.read_lines_without_comments()
         for model in tqdm(models, desc="Models"):
             for dataset in tqdm(datasets, desc="Datasets", leave=False):
+                os.system('clear')
                 try:
                     print('='*80)
                     print("\n")
@@ -82,4 +83,4 @@ if __name__ == "__main__":
                     retry_finetuning(model, dataset, access_token)
                     continue
                 
-                os.system('cls')
+                
