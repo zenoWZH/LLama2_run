@@ -254,26 +254,22 @@ class LLMFinetuner:
         with open(self.output_dir+filename, "w") as file:
             file.write(message)
 
-    async def train(self):
-        try:
-            start_time = time.time()
-            # Set supervised fine-tuning parameters
-            trainer = SFTTrainer(
-                model=self.model,
-                peft_config=self.peft_config,
-                train_dataset=self.split_dataset['train'],
-                eval_dataset=self.split_dataset['test'],
-                args=self.training_arguments,
-                max_seq_length=self.max_seq_length,
-                tokenizer=self.tokenizer,
-                packing=self.packing,
-                dataset_text_field='text',
-            )
-            await trainer.train()
-            self.training_time = time.time() - start_time
-            self._log_time('Training time', self.training_time)
-            print("\n")
-            print(f"Training Complete at batch={self.batch_size}")
-        except RuntimeError as err:
-            print(err)
-            return
+    def train(self):
+        start_time = time.time()
+        # Set supervised fine-tuning parameters
+        trainer = SFTTrainer(
+            model=self.model,
+            peft_config=self.peft_config,
+            train_dataset=self.split_dataset['train'],
+            eval_dataset=self.split_dataset['test'],
+            args=self.training_arguments,
+            max_seq_length=self.max_seq_length,
+            tokenizer=self.tokenizer,
+            packing=self.packing,
+            dataset_text_field='text',
+        )
+        trainer.train()
+        self.training_time = time.time() - start_time
+        self._log_time('Training time', self.training_time)
+        print("\n")
+        print(f"Training Complete at batch={self.batch_size}")
