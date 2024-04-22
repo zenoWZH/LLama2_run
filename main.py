@@ -38,7 +38,7 @@ if len(sys.argv)>5 or len(sys.argv)<4:
 elif len(sys.argv)>=4:
     model_name = sys.argv[1]
     dataset_name = sys.argv[2]
-    batch_size = sys.argv[3]
+    batch_size = int(sys.argv[3])
     
     if len(sys.argv)==4:
         access_token = default_access_token
