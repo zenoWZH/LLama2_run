@@ -44,7 +44,7 @@ if __name__ == "__main__":
                 print("Start with batch_size = 8\n")
                 print('='*80)
                 print("\n")
-                
+                os.system(f"poetry run python main.py {model} {dataset} {batch_size}")
                 print("Training Successful!!!")
                 torch.cuda.empty_cache()
                 time.sleep(5)
