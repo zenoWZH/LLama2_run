@@ -22,8 +22,8 @@ def retry_finetuning(model, dataset, access_token, batch_size=8):
         finetuner.train()
     except RuntimeError as err:
         del finetuner
-        clear_cache()
         gc.collect()
+        clear_cache()
         if batch_size<=1:
             print(err)
             print("Aborting fine-tuning of this model and dataset")
@@ -62,8 +62,8 @@ if __name__ == "__main__":
                     print(err)
                     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
                     del finetuner
-                    clear_cache()
                     gc.collect()
+                    clear_cache()
                     print("Retrying fine-tuning after clear cache")
                     retry_finetuning(model, dataset, access_token)
                     continue
