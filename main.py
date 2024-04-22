@@ -6,6 +6,7 @@ import sys
 from tqdm import tqdm
 import gc
 import torch
+import shutil
 
 def clear_cache():
     torch.cuda.empty_cache()
