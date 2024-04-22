@@ -49,8 +49,10 @@ try:
     finetuner = LLMFinetuner(model_name, dataset_name, access_token, batch_size)
     finetuner.train()
 except BaseException as err:
+    print('='*80)
     print("ERROR!!!\n")
     print(err)
+    print('='*80)
     print("\n")
     sys.exit(1)
 del finetuner
