@@ -24,7 +24,7 @@ class LLMFinetuner:
     def __init__(self, model_name, dataset_name, access_token, batch_size=4, **training_args):
         self.model_name = model_name
         self.dataset_name = dataset_name
-        self.batch_size = batch_size
+        self.batch_size = int(batch_size)
         # Output directory where the model predictions and checkpoints will be stored
         self.output_dir = "./results/"
         ################################################################################
@@ -279,6 +279,5 @@ class LLMFinetuner:
             del self.trainer
     
         except BaseException as err:
-            del self.model, self.tokenizer, self.dataset_loader, self.split_dataset
             gc.collect()
             raise RuntimeError(err)
