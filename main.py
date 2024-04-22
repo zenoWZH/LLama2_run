@@ -1,6 +1,6 @@
 # main.py
 from LLMFinetuner import LLMFinetuner
-from ConfigReader import ConfigReader
+
 import os
 import sys
 from tqdm import tqdm
@@ -49,45 +49,22 @@ default_access_token = ConfigReader("access_token.txt").read_lines_without_comme
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4 and len(sys.argv) > 1:
-        print("Usage: python main.py <model_name> <dataset_name> <access_token>")
+    if len(sys.argv) > 5 or len(sys.argv<4):
+        print("Usage: python main.py <model_name> <dataset_name> <batch_size> <access_token>")
         sys.exit(1)
-    elif len(sys.argv) == 4:
+    elif len(sys.argv) >=4:
         model_name = sys.argv[1]
         dataset_name = sys.argv[2]
-        access_token = sys.argv[3]
+        batch_size = sys.argv[3]
         
-        finetuner = LLMFinetuner(model_name, dataset_name, access_token, per_device_train_batch_size=8, num_train_epochs=3)
-        finetuner.train()
-    else:
-        access_token = default_access_token
-        model_reader = ConfigReader("models.txt")
-        dataset_reader = ConfigReader("datasets.txt")
-        models = model_reader.read_lines_without_comments()
-        datasets = dataset_reader.read_lines_without_comments()
-        for model in tqdm(models, desc="Models"):
-            for dataset in tqdm(datasets, desc="Datasets", leave=False):
-                os.system('clear')
-                try:
-                    print('='*80)
-                    print("\n")
-                    print(f"Training on model {model} with dataset {dataset}")
-                    print("Start with batch_size = 8\n")
-                    print('='*80)
-                    print("\n")
-                    finetuner = LLMFinetuner(model, dataset, access_token, batch_size=8)
-                    finetuner.train()
-                    del finetuner
-                    gc.collect()
-                    print("Training Successful!!!")
-                    time.sleep(5)
-                except RuntimeError as err:
-                    #print(err)
-                    del finetuner
-                    gc.collect()
-                    clear_cache()
-                    print("GPU OUT OF MEMORY!!! Retrying fine-tuning after clear cache")
-                    retry_finetuning(model, dataset, access_token)
-                    continue
-                
+        if len(sys.argv) == 4:
+            access_token = default_access_token
+        else:
+            access_token = sys.argv[4]    
+    
+    finetuner = LLMFinetuner(model_name, dataset_name, access_token, batch_size)
+    finetuner.train()
+    del finetuner
+    gc.collect()
+    sys.exit(0)
                 
