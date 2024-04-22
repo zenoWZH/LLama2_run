@@ -249,10 +249,10 @@ class LLMFinetuner:
         # Use temporary variables for filename
         model_short_name = self.model_name.split('/')[-1]
         dataset_short_name = self.dataset_name.split('/')[-1]
-        filename = f"{model_short_name}_{dataset_short_name}_{self.batch_size}timing_log.txt"
+        filename = f"{model_short_name}_{dataset_short_name}_batch{str(self.batch_size)}.txt"
         
         print(message.strip())
-        with open(self.output_dir+filename, "w") as file:
+        with open(self.output_dir+filename, "a+") as file:
             file.write(message)
 
     def train(self):
@@ -275,9 +275,9 @@ class LLMFinetuner:
             self.training_time = time.time() - start_time
             self._log_time('Training time', self.training_time)
             print("\n")
-            print(f"Training Complete at batch={self.batch_size}")
+            print(f"Training Complete at batch={str(self.batch_size)}")
             del self.trainer
-    
+            gc.collect()
         except BaseException as err:
             gc.collect()
             raise RuntimeError(err)
