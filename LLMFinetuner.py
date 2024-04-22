@@ -20,7 +20,7 @@ from peft import LoraConfig, get_peft_model
 from trl import SFTTrainer
 from DatasetFormatter import DatasetFormatter
 class LLMFinetuner:
-    def __init__(self, model_name, dataset_name, access_token, **training_args):
+    def __init__(self, model_name, dataset_name, access_token, batch_size=4, **training_args):
         self.model_name = model_name
         self.dataset_name = dataset_name
         
@@ -67,10 +67,10 @@ class LLMFinetuner:
         bf16 = True
 
         # Batch size per GPU for training
-        per_device_train_batch_size = 4
+        per_device_train_batch_size = batch_size
 
         # Batch size per GPU for evaluation
-        per_device_eval_batch_size = 4
+        per_device_eval_batch_size = batch_size
 
         # Number of update steps to accumulate the gradients for
         gradient_accumulation_steps = 1

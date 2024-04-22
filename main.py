@@ -4,22 +4,31 @@ from ConfigReader import ConfigReader
 import os
 import sys
 from tqdm import tqdm
-
+import gc
+import torch
 
 def clear_cache():
+    torch.cuda.empty_cache()
     cache_dir = os.path.join(os.getcwd(), '.cache', 'huggingface')
     if os.path.exists(cache_dir):
         shutil.rmtree(cache_dir)
     os.makedirs(cache_dir, exist_ok=True)
     print("Cache cleared")
 
-def retry_finetuning(model, dataset, access_token):
+def retry_finetuning(model, dataset, access_token, batch_size=8):
     try:
+        finetuner = LLMFinetuner(model, dataset, access_token, batch_size=batch_size)
         finetuner.train()
     except RuntimeError as err:
-        print(err)
-        print("Aborting fine-tuning of this model and dataset")
+        del finetuner
         clear_cache()
+        gc.collect()
+        if batch_size<=1:
+            print(err)
+            print("Aborting fine-tuning of this model and dataset")
+        else:
+            retry_finetuning(model, dataset, access_token, batch_size/2)
+        
         
 default_access_token = ConfigReader("access_token.txt").read_lines_without_comments()[0]
 if __name__ == "__main__":
@@ -42,11 +51,16 @@ if __name__ == "__main__":
         for model in tqdm(models, desc="Models"):
             for dataset in tqdm(datasets, desc="Datasets", leave=False):
                 try:
-                    finetuner = LLMFinetuner(model, dataset, access_token)
+                    print("Start with batch_size=16\n")
+                    finetuner = LLMFinetuner(model, dataset, access_token, batch_size=16)
                     finetuner.train()
+                    gc.collect()
                 except RuntimeError as err:
                     print(err)
+                    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
+                    del finetuner
                     clear_cache()
+                    gc.collect()
                     print("Retrying fine-tuning after clear cache")
                     retry_finetuning(model, dataset, access_token)
                     continue
