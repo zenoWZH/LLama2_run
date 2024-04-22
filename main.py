@@ -78,3 +78,5 @@ if __name__ == "__main__":
                     print("GPU OUT OF MEMORY!!! Retrying fine-tuning after clear cache")
                     retry_finetuning(model, dataset, access_token)
                     continue
+                
+                os.system('cls')
