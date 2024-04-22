@@ -19,7 +19,6 @@ def retry_finetuning(model, dataset, batch_size=4):
     else:
         torch.cuda.empty_cache()
         if batch_size<=1:
-            print(err)
             print("Aborting fine-tuning of this model and dataset")
             torch.cuda.empty_cache()
         else:
