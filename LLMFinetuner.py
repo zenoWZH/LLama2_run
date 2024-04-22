@@ -275,5 +275,5 @@ class LLMFinetuner:
             print("\n")
             print(f"Training Complete at batch={self.batch_size}")
         except BaseException as err:
+            del self.trainer, self.model, self.tokenizer, self.dataset_loader, self.split_dataset
             raise RuntimeError(err)
-        
