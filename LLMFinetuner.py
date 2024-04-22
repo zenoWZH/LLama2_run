@@ -272,7 +272,7 @@ class LLMFinetuner:
             self.training_time = time.time() - start_time
             self._log_time('Training time', self.training_time)
             print("\n")
-            print(f"Training Complete at batch={}")
+            print(f"Training Complete at batch={self.batch_size}")
         except RuntimeError as err:
             print(err)
             return
