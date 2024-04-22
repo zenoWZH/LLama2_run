@@ -7,6 +7,8 @@ from tqdm import tqdm
 import gc
 import torch
 import shutil
+import time
+
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 
 import warnings
@@ -73,7 +75,8 @@ if __name__ == "__main__":
                     finetuner.train()
                     del finetuner
                     gc.collect()
-                    
+                    print("Training Successful!!!")
+                    time.sleep(5)
                 except RuntimeError as err:
                     #print(err)
                     del finetuner
