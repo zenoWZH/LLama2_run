@@ -51,6 +51,8 @@ if __name__ == "__main__":
         for model in tqdm(models, desc="Models"):
             for dataset in tqdm(datasets, desc="Datasets", leave=False):
                 try:
+                    print('='*80)
+                    print("\n")
                     print("Start with batch_size=16\n")
                     finetuner = LLMFinetuner(model, dataset, access_token, batch_size=16)
                     finetuner.train()
