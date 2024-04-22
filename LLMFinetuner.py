@@ -268,8 +268,12 @@ class LLMFinetuner:
             packing=self.packing,
             dataset_text_field='text',
         )
-        trainer.train()
-        self.training_time = time.time() - start_time
-        self._log_time('Training time', self.training_time)
-        print("\n")
-        print(f"Training Complete at batch={self.batch_size}")
+        try:
+            trainer.train()
+            self.training_time = time.time() - start_time
+            self._log_time('Training time', self.training_time)
+            print("\n")
+            print(f"Training Complete at batch={self.batch_size}")
+        except BaseException as err:
+            raise RuntimeError(err)
+        
