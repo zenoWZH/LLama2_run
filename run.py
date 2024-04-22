@@ -25,7 +25,7 @@ def retry_finetuning(model, dataset, batch_size=4):
             torch.cuda.empty_cache()
         else:
             retry_finetuning(model, dataset, batch_size//2)
-
+print(__name__)
 if __name__ == "__run__":
     print("RUNNING!!!")
     print("\n")
