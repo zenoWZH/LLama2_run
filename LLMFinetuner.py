@@ -18,6 +18,7 @@ from peft import LoraConfig, get_peft_model
 from trl import SFTTrainer
 import asyncio
 from DatasetFormatter import DatasetFormatter
+import gc
 
 class LLMFinetuner:
     def __init__(self, model_name, dataset_name, access_token, batch_size=4, **training_args):
@@ -276,4 +277,5 @@ class LLMFinetuner:
             print(f"Training Complete at batch={self.batch_size}")
         except BaseException as err:
             del self.trainer, self.model, self.tokenizer, self.dataset_loader, self.split_dataset
+            gc.collect()
             raise RuntimeError(err)
