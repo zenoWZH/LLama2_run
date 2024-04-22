@@ -7,6 +7,7 @@ import torch
 
 def retry_finetuning(model, dataset, batch_size=4):
     torch.cuda.empty_cache()
+    
     print('='*80)
     print("\n")
     print(f"Try again with batch_size = {batch_size}")

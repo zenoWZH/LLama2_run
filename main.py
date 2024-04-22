@@ -14,6 +14,7 @@ import warnings
 
 
 def clear_cache():
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
     torch.cuda.empty_cache()
     cache_dir = os.path.join(os.getcwd(), '.cache', 'huggingface')
     if os.path.exists(cache_dir):
@@ -27,7 +28,6 @@ print(__name__)
 #if __name__ == "__main__":
 print("START MAIN PROCESS!!!")
 print("\n")
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 warnings.filterwarnings("ignore")
 default_access_token = ConfigReader("access_token.txt").read_lines_without_comments()[0]
 
