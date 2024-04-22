@@ -7,6 +7,7 @@ from tqdm import tqdm
 import gc
 import torch
 import shutil
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 
 def clear_cache():
     torch.cuda.empty_cache()
@@ -54,13 +55,14 @@ if __name__ == "__main__":
                 try:
                     print('='*80)
                     print("\n")
-                    print("Start with batch_size=16\n")
+                    print("Start with batch_size = 8\n")
+                    print('='*80)
                     finetuner = LLMFinetuner(model, dataset, access_token, batch_size=8)
                     finetuner.train()
+                    del finetuner
                     gc.collect()
                 except RuntimeError as err:
                     print(err)
-                    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
                     del finetuner
                     gc.collect()
                     clear_cache()

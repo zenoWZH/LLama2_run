@@ -13,8 +13,6 @@ from transformers import (
     TrainingArguments,
     pipeline,
     logging,
-    Trainer,
-    DataCollatorForLanguageModeling,
 )
 from peft import LoraConfig, get_peft_model
 from trl import SFTTrainer
@@ -132,7 +130,7 @@ class LLMFinetuner:
         
         start_time = time.time()
         formatted_dataset = self.dataset_loader.format_dataset()
-        print(formatted_dataset)
+        #print(formatted_dataset)
         if formatted_dataset is not None and not ('train' in formatted_dataset.column_names):
             # 数据集通常包含训练和测试集，但如果需要自定义比例，可以使用以下方法
             train_test_split = formatted_dataset.train_test_split(test_size=0.1)
@@ -152,8 +150,8 @@ class LLMFinetuner:
             self.split_dataset = formatted_dataset
             
         
-        print(train_test_split)
-        print(self.split_dataset.keys())
+        #print(train_test_split)
+        #print(self.split_dataset.keys())
         # Load LLaMA tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, token=access_token)
         self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -232,7 +230,11 @@ class LLMFinetuner:
             lr_scheduler_type=lr_scheduler_type,
             logging_dir=self.output_dir+"logs",
         )
-        
+    
+    def __del__(self):
+        del self.model, self.tokenizer, self.dataset_loader, self.split_dataset
+        #sys.exit(0) vs os._exit(0)
+    
     def _log_time(self, prefix, seconds):
         # Calculate time format
         days, rem = divmod(seconds, 86400)
@@ -251,20 +253,24 @@ class LLMFinetuner:
             file.write(message)
 
     def train(self):
-        start_time = time.time()
-        
-        # Set supervised fine-tuning parameters
-        trainer = SFTTrainer(
-            model=self.model,
-            peft_config=self.peft_config,
-            train_dataset=self.split_dataset['train'],
-            eval_dataset=self.split_dataset['test'],
-            args=self.training_arguments,
-            max_seq_length=self.max_seq_length,
-            tokenizer=self.tokenizer,
-            packing=self.packing,
-            dataset_text_field='text',
-        )
-        trainer.train()
-        self.training_time = time.time() - start_time
-        self._log_time('Training time', self.training_time)
+        try:
+            start_time = time.time()
+            
+            # Set supervised fine-tuning parameters
+            trainer = SFTTrainer(
+                model=self.model,
+                peft_config=self.peft_config,
+                train_dataset=self.split_dataset['train'],
+                eval_dataset=self.split_dataset['test'],
+                args=self.training_arguments,
+                max_seq_length=self.max_seq_length,
+                tokenizer=self.tokenizer,
+                packing=self.packing,
+                dataset_text_field='text',
+            )
+            trainer.train()
+            self.training_time = time.time() - start_time
+            self._log_time('Training time', self.training_time)
+        except RuntimeError as err:
+            print(err)
+            return
