@@ -71,10 +71,10 @@ if __name__ == "__main__":
                     gc.collect()
                     
                 except RuntimeError as err:
-                    print(err)
+                    #print(err)
                     del finetuner
                     gc.collect()
                     clear_cache()
-                    print("Retrying fine-tuning after clear cache")
+                    print("GPU OUT OF MEMORY!!! Retrying fine-tuning after clear cache")
                     retry_finetuning(model, dataset, access_token)
                     continue
