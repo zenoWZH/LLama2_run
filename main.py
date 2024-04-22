@@ -34,6 +34,7 @@ default_access_token = ConfigReader("access_token.txt").read_lines_without_comme
 if len(sys.argv)>5 or len(sys.argv)<4:
     print("Usage: python main.py <model_name> <dataset_name> <batch_size> <access_token>")
     sys.exit(1)
+
 elif len(sys.argv)>=4:
     model_name = sys.argv[1]
     dataset_name = sys.argv[2]
@@ -45,7 +46,10 @@ elif len(sys.argv)>=4:
         access_token = sys.argv[4]    
 
 finetuner = LLMFinetuner(model_name, dataset_name, access_token, batch_size)
-finetuner.train()
+try:
+    finetuner.train()
+except BaseException as err:
+    sys.exit(1)
 del finetuner
 gc.collect()
 sys.exit(0)
