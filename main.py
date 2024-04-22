@@ -9,11 +9,9 @@ import torch
 import shutil
 import time
 import asyncio
-
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
-
+from ConfigReader import ConfigReader
 import warnings
-warnings.filterwarnings("ignore")
+
 
 def clear_cache():
     torch.cuda.empty_cache()
@@ -23,12 +21,16 @@ def clear_cache():
     os.makedirs(cache_dir, exist_ok=True)
     print("Cache cleared")   
 
-default_access_token = ConfigReader("access_token.txt").read_lines_without_comments()[0]
+
 
 print(__name__)
 #if __name__ == "__main__":
 print("START MAIN PROCESS!!!")
 print("\n")
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
+warnings.filterwarnings("ignore")
+default_access_token = ConfigReader("access_token.txt").read_lines_without_comments()[0]
+
 if len(sys.argv) > 5 or len(sys.argv<4):
     print("Usage: python main.py <model_name> <dataset_name> <batch_size> <access_token>")
     sys.exit(1)

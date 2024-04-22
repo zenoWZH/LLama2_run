@@ -37,20 +37,18 @@ if __name__ == "__main__":
     for model in tqdm(models, desc="Models"):
         for dataset in tqdm(datasets, desc="Datasets", leave=False):
             os.system('clear')
-            try:
-                print('='*80)
-                print("\n")
-                print(f"Training on model {model} with dataset {dataset}")
-                print("Start with batch_size = 8\n")
-                print('='*80)
-                print("\n")
-                os.system(f"poetry run python main.py {model} {dataset} {batch_size}")
+            print('='*80)
+            print("\n")
+            print(f"Training on model {model} with dataset {dataset}")
+            print("Start with batch_size = 8\n")
+            print('='*80)
+            print("\n")
+            syscode = os.system(f"poetry run python main.py {model} {dataset} {batch_size}")
+            if syscode == 0:
                 print("Training Successful!!!")
+            else:
                 torch.cuda.empty_cache()
-                time.sleep(5)
-            except RuntimeError as err:
-                #print(err)
-                print("GPU OUT OF MEMORY!!! Retrying fine-tuning after clear cache")
                 retry_finetuning(model, dataset, batch_size//2)
-                torch.cuda.empty_cache()
-                continue
+            
+            time.sleep(5)
+        
