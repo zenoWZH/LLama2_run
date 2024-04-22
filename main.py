@@ -55,7 +55,7 @@ if __name__ == "__main__":
                     print('='*80)
                     print("\n")
                     print("Start with batch_size=16\n")
-                    finetuner = LLMFinetuner(model, dataset, access_token, batch_size=16)
+                    finetuner = LLMFinetuner(model, dataset, access_token, batch_size=8)
                     finetuner.train()
                     gc.collect()
                 except RuntimeError as err:
