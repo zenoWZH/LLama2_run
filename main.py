@@ -9,6 +9,9 @@ import torch
 import shutil
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 
+import warnings
+warnings.filterwarnings("ignore")
+
 def clear_cache():
     torch.cuda.empty_cache()
     cache_dir = os.path.join(os.getcwd(), '.cache', 'huggingface')
