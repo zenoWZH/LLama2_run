@@ -17,10 +17,17 @@ def clear_cache():
     os.makedirs(cache_dir, exist_ok=True)
     print("Cache cleared")
 
-def retry_finetuning(model, dataset, access_token, batch_size=8):
+def retry_finetuning(model, dataset, access_token, batch_size=4):
     try:
+        print('='*80)
+        print("\n")
+        print(f"Try again with batch_size = {batch_size}")
+        print('='*80)
+        print("\n")
         finetuner = LLMFinetuner(model, dataset, access_token, batch_size=batch_size)
         finetuner.train()
+        del finetuner
+        gc.collect()
     except RuntimeError as err:
         del finetuner
         gc.collect()
@@ -57,6 +64,7 @@ if __name__ == "__main__":
                     print("\n")
                     print("Start with batch_size = 8\n")
                     print('='*80)
+                    print("\n")
                     finetuner = LLMFinetuner(model, dataset, access_token, batch_size=8)
                     finetuner.train()
                     del finetuner
