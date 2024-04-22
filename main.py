@@ -44,12 +44,14 @@ elif len(sys.argv)>=4:
         access_token = default_access_token
     else:
         access_token = sys.argv[4]    
-print(model_name, dataset_name, batch_size)
+
 try:
     finetuner = LLMFinetuner(model_name, dataset_name, access_token, batch_size)
     finetuner.train()
 except BaseException as err:
+    print("ERROR!!!\n")
     print(err)
+    print("\n")
     sys.exit(1)
 del finetuner
 gc.collect()
