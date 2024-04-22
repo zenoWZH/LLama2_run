@@ -27,6 +27,8 @@ def retry_finetuning(model, dataset, batch_size=4):
             retry_finetuning(model, dataset, batch_size//2)
 
 if __name__ == "__run__":
+    print("RUNNING!!!")
+    print("\n")
     model_reader = ConfigReader("models.txt")
     dataset_reader = ConfigReader("datasets.txt")
     models = model_reader.read_lines_without_comments()

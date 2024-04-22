@@ -27,6 +27,8 @@ default_access_token = ConfigReader("access_token.txt").read_lines_without_comme
 
 
 if __name__ == "__main__":
+    print("THIS IS MAIN PROCESS!!!")
+    print("\n")
     if len(sys.argv) > 5 or len(sys.argv<4):
         print("Usage: python main.py <model_name> <dataset_name> <batch_size> <access_token>")
         sys.exit(1)
