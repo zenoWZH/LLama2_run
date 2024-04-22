@@ -234,7 +234,7 @@ class LLMFinetuner:
         )
     
     def __del__(self):
-        del self.model, self.tokenizer, self.dataset_loader, self.split_dataset
+        del self.trainer, self.model, self.tokenizer, self.dataset_loader, self.split_dataset
         #sys.exit(0) vs os._exit(0)
     
     def _log_time(self, prefix, seconds):
@@ -257,7 +257,7 @@ class LLMFinetuner:
     def train(self):
         start_time = time.time()
         # Set supervised fine-tuning parameters
-        trainer = SFTTrainer(
+        self.trainer = SFTTrainer(
             model=self.model,
             peft_config=self.peft_config,
             train_dataset=self.split_dataset['train'],
@@ -269,7 +269,7 @@ class LLMFinetuner:
             dataset_text_field='text',
         )
         try:
-            trainer.train()
+            self.trainer.train()
             self.training_time = time.time() - start_time
             self._log_time('Training time', self.training_time)
             print("\n")
