@@ -114,7 +114,7 @@ class LLMFinetuner:
         ################################################################################
 
         # Maximum sequence length to use
-        self.max_seq_length = None
+        self.max_seq_length = 4096
 
         # Pack multiple short examples in the same input sequence to increase efficiency
         self.packing = False
