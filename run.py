@@ -33,7 +33,7 @@ if __name__ == "__main__":
     dataset_reader = ConfigReader("datasets.txt")
     models = model_reader.read_lines_without_comments()
     datasets = dataset_reader.read_lines_without_comments()
-    batch_size = '8'
+    batch_size = 8
     for model in tqdm(models, desc="Models"):
         for dataset in tqdm(datasets, desc="Datasets", leave=False):
             os.system('clear')
@@ -43,7 +43,7 @@ if __name__ == "__main__":
             print("Start with batch_size = 8\n")
             print('='*80)
             print("\n")
-            syscode = os.system(f"poetry run python main.py {model} {dataset} {batch_size}")
+            syscode = os.system(f"poetry run python main.py {model} {dataset} {str(batch_size)}")
             if syscode == 0:
                 print("Training Successful!!!")
             else:
