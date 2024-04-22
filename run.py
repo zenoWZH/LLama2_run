@@ -2,7 +2,7 @@ from ConfigReader import ConfigReader
 import os
 import time
 import sys
-import tqdm
+from tqdm import tqdm
 import torch
 
 def retry_finetuning(model, dataset, batch_size=4):
