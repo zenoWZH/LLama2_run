@@ -33,7 +33,7 @@ def retry_finetuning(model, dataset, batch_size=4):
         else:
             retry_finetuning(model, dataset, batch_size//2)
         
-print(__name__)
+
 if __name__ == "__main__":
     print("RUNNING!!!")
     #print("\n")
