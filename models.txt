@@ -1,11 +1,11 @@
 # Tiny llama 1b
-TinyLlama/TinyLlama-1.1B-Chat-v1.0
+#TinyLlama/TinyLlama-1.1B-Chat-v1.0
 
 #gemma 2b
-google/gemma-2b
+#google/gemma-2b
 
 #stablelm-12b
-stabilityai/stablelm-2-12b
+#stabilityai/stablelm-2-12b
 
 #Llama series
 NousResearch/Llama-2-7b-chat-hf
