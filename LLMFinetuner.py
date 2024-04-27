@@ -92,6 +92,8 @@ class LLMFinetuner:
         self.start_time = time.time()
         # Set supervised fine-tuning parameters
         #
+        self.batch_size = training_arguments.per_device_train_batch_size
+        training_arguments.save_strategy = "epoch"
         self.split_dataset(formatted_dataset)
         try:
             self.trainer = SFTTrainer(

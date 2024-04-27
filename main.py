@@ -209,6 +209,7 @@ class FinetuneLoader:
             output_dir=self.output_dir,
             num_train_epochs=num_train_epochs,
             per_device_train_batch_size=per_device_train_batch_size,
+            per_device_eval_batch_size=per_device_eval_batch_size,
             gradient_accumulation_steps=gradient_accumulation_steps,
             optim=optim,
             save_steps=save_steps,
