@@ -93,33 +93,25 @@ class LLMFinetuner:
         # Set supervised fine-tuning parameters
         #
         self.split_dataset(formatted_dataset)
-        if not self.trainer:
-            try:
-                self.trainer = SFTTrainer(
-                model=self.model,
-                peft_config=peft_config,
-                train_dataset=self.dataset['train'],
-                eval_dataset=self.dataset['test'],
-                args=training_arguments,
-                max_seq_length=max_seq_length,
-                tokenizer=tokenizer,
-                packing=packing,
-                dataset_text_field=dataset_text_field,
-            )
-            except BaseException as err:
-                gc.collect()
-                print("Error in setting up Trainer, or no Trainer")
-                raise RuntimeError(err)
-        else:            
-            try:
-                self.trainer.train_dataset = self.dataset['train']
-                self.trainer.evaluate_dataset = self.dataset['test']
-                self.trainer.train()
-                gc.collect()
-            except BaseException as err:
-                gc.collect()
-                raise RuntimeError(err)
+        try:
+            self.trainer = SFTTrainer(
+                            model=self.model,
+                            peft_config=peft_config,
+                            train_dataset=self.dataset['train'],
+                            eval_dataset=self.dataset['test'],
+                            args=training_arguments,
+                            max_seq_length=max_seq_length,
+                            tokenizer=tokenizer,
+                            packing=packing,
+                            dataset_text_field=dataset_text_field,
+                        )
+        except BaseException as err:
+            gc.collect()
+            print("Error in setting up Trainer, or no Trainer")
+            raise RuntimeError(err)
+
         del self.dataset
+        gc.collect()
         print("\n")
         print(f"Training Complete at batch={str(self.batch_size)} in shattered mode")
         self.training_time = time.time() - self.start_time

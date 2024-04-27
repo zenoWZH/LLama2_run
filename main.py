@@ -77,7 +77,7 @@ class FinetuneLoader:
         lora_alpha = 16
 
         # Dropout probability for LoRA layers
-        lora_dropout = 0.1
+        lora_dropout = 0.05
 
         ################################################################################
         # bitsandbytes parameters
@@ -143,7 +143,7 @@ class FinetuneLoader:
         save_steps = 0
 
         # Log every X updates steps
-        logging_steps = 100
+        logging_steps = 50
 
         ################################################################################
         # SFT parameters
@@ -236,15 +236,17 @@ class FinetuneLoader:
         gc.collect()
         return 0
     
-    def finetune_shattered(self, size_per_shard=1000):
+    def finetune_shattered(self, size_per_shard=1024):
         start_time = time.time()
         finetuner = LLMFinetuner(self.model, self.batch_size)
-
+        num_shards = (len(self.formatted_dataset)+size_per_shard) // size_per_shard - 1
+        
         # 手动数据切片和训练
-        for i in range(0, len(self.formatted_dataset), size_per_shard):
+        for i in tqdm(range(0, num_shards)):
+            #print(f"Shattering dataset into {num_shards}, now part {i+1}")
             #try:
-                sub_dataset = self.formatted_dataset.select(range(i, min(i + 1000, len(self.formatted_dataset))))
-                finetuner.tune_step(sub_dataset,
+            sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=True)
+            finetuner.tune_step(sub_dataset,
                                 peft_config=self.peft_config, \
                                 training_arguments=self.training_arguments, \
                                 tokenizer=self.tokenizer, \
@@ -311,3 +313,4 @@ if __name__ == "__main__":
     ft_singleGPU.load_model()
     ft_singleGPU.load_dataset()
     ft_singleGPU.finetune_shattered()
+    sys.exit(0)

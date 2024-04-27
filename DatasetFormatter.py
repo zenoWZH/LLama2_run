@@ -86,4 +86,4 @@ class DatasetFormatter:
             return self.dataset.map(self.conversation_formatting)
         else:
             print("Dataset name not recognized.")
-            return self.dataset
+            return self.dataset.with_format("torch")
