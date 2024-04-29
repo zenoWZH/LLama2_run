@@ -56,8 +56,8 @@ class DatasetFormatter:
             self.dataset = load_dataset("BelleGroup/train_1M_CN", 'all')
         elif self.dataset_name == "BelleGroup/train_0.5M_CN":
             self.dataset = load_dataset("BelleGroup/train_0.5M_CN",  'all')
-        elif self.dataset_name == "BelleGroup/test_1M_CN":
-            self.dataset = load_dataset("BelleGroup/test_1M_CN",  'all')
+        elif self.dataset_name == "BelleGroup/train_3.5M_CN":
+            self.dataset = load_dataset("BelleGroup/train_3.5M_CN",  'all')
         elif self.dataset_name == "m-a-p/COIG-CQIA":
             self.dataset = load_dataset("m-a-p/COIG-CQIA", 'chinese_traditional', split="train")
             loadlist = ['coig_pc', 'exam', 'finance', 'douban', 'human_value', 'logi_qa', 'ruozhiba', 'segmentfault', 'wiki', 'wikihow', 'xhs', 'zhihu']

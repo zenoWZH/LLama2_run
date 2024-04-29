@@ -3,7 +3,7 @@ from LLMFinetuner import LLMFinetuner
 from ConfigReader import ConfigReader
 from DatasetFormatter import DatasetFormatter
 
-from datasets import load_dataset, DatasetDict
+from datasets import load_dataset, DatasetDict, concatenate_datasets
 from peft import LoraConfig, get_peft_model
 from transformers import (
     AutoModelForCausalLM,
@@ -240,11 +240,15 @@ class FinetuneLoader:
     def finetune_shattered(self, size_per_shard=1024):
         start_time = time.time()
         finetuner = LLMFinetuner(self.model, self.batch_size)
+        if len(self.formatted_dataset)<=2:
+            if len(self.formatted_dataset)==1:
+                self.formatted_dataset = self.formatted_dataset["train"]
+            else:
+                self.formatted_dataset = concatenate_datasets([self.formatted_dataset["train"], self.formatted_dataset["test"]])
         num_shards = (len(self.formatted_dataset)+size_per_shard) // size_per_shard - 1
-        
+        print(f"===================Shard dataset into {num_shards} parts==================")
         # 手动数据切片和训练
         for i in tqdm(range(0, num_shards)):
-            #print(f"Shattering dataset into {num_shards}, now part {i+1}")
             #try:
             sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=True)
             finetuner.tune_step(sub_dataset,

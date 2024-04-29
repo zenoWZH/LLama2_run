@@ -114,8 +114,8 @@ class LLMFinetuner:
 
         del self.dataset
         gc.collect()
-        print("\n")
-        print(f"Training Complete at batch={str(self.batch_size)} in shattered mode")
+        #print("\n")
+        #print(f"Training Complete at batch={str(self.batch_size)} in shattered mode")
         self.training_time = time.time() - self.start_time
         self._log_time('Training time', self.training_time)
         return self.model
