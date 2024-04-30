@@ -248,7 +248,7 @@ class FinetuneLoader:
         num_shards = (len(self.formatted_dataset)+size_per_shard) // size_per_shard - 1
         print(f"===================Shard dataset into {num_shards} parts==================")
         # 手动数据切片和训练
-        for i in tqdm(range(0, num_shards)):
+        for i in tqdm(range(0, num_shards+1)):
             #try:
             sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=True)
             finetuner.tune_step(sub_dataset,
