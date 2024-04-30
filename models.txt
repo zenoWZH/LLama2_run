@@ -8,8 +8,8 @@
 #stabilityai/stablelm-2-12b
 
 #Llama series
-NousResearch/Llama-2-7b-chat-hf
-NousResearch/Llama-2-13b-chat-hf
+#NousResearch/Llama-2-7b-chat-hf
+#NousResearch/Llama-2-13b-chat-hf
 meta-llama/Meta-Llama-3-8B
 
 #MPT-30b
