@@ -33,7 +33,7 @@ class FinetuneLoader:
         model_short_name = self.model_name.split('/')[-1]
         dataset_short_name = self.dataset_name.split('/')[-1]
         self.logfile = f"./results/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}.log"
-        self.shattered_logfile = f"./results/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}_shattered.log"
+        self.shattered_logfile = f"./results/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}_shard.log"
         self.output_file = f"{output_dir}+{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}"
     
     def _log_time(self, prefix, seconds, log_file=None):
@@ -179,7 +179,7 @@ class FinetuneLoader:
             device_map=device_map,
             token=access_token
         )
-        self.model.config.use_cache = True
+        self.model.config.use_cache = False
         self.model.config.pretraining_tp = 1
 
         # Load LoRA configuration
@@ -239,7 +239,7 @@ class FinetuneLoader:
     
     def finetune_shattered(self, size_per_shard=1024):
         start_time = time.time()
-        finetuner = LLMFinetuner(self.model, self.batch_size)
+        finetuner = LLMFinetuner(self.model, self.batch_size, log_file=self.logfile)
         if len(self.formatted_dataset)<=2:
             if len(self.formatted_dataset)==1:
                 self.formatted_dataset = self.formatted_dataset["train"]
