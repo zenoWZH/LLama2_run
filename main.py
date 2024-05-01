@@ -245,7 +245,7 @@ class FinetuneLoader:
                 self.formatted_dataset = self.formatted_dataset["train"]
             else:
                 self.formatted_dataset = concatenate_datasets([self.formatted_dataset["train"], self.formatted_dataset["test"]])
-        num_shards = (len(self.formatted_dataset)+size_per_shard-1) // size_per_shard
+        num_shards = (len(self.formatted_dataset)+size_per_shard - 1) // size_per_shard
         print(f"===================Shard dataset into {num_shards} parts==================")
         # 手动数据切片和训练
         for i in tqdm(range(0, num_shards)):
