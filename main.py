@@ -60,7 +60,7 @@ class FinetuneLoader:
         start_time = time.time()
         self.formatted_dataset = self.dataset_loader.format_dataset()
         # Load LLaMA tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, token=access_token)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, token=access_token, padding="max_length", truncation=True)
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.tokenizer.padding_side = "right" # Fix weird overflow issue with fp16 training
         #self.tokenized_dataset = self.formatted_dataset.map(lambda examples: self.tokenizer(examples["text"]), batched=True)
@@ -160,7 +160,7 @@ class FinetuneLoader:
         save_steps = 0
 
         # Log every X updates steps
-        logging_steps = 50
+        logging_steps = 100
 
         ################################################################################
         # SFT parameters

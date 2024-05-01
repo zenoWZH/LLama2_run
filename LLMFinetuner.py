@@ -92,15 +92,17 @@ class LLMFinetuner:
         self.start_time = time.time()
         # Set supervised fine-tuning parameters
         #
-        self.batch_size = training_arguments.per_device_train_batch_size
-        training_arguments.save_strategy = "epoch"
         self.split_dataset(formatted_dataset)
         try:
-            if peft_config is None:
+            if training_arguments is None:
                 print("Resume from Checkpoints")
                 self.trainer.train(resume_from_checkpoint=True)
             else:
                 print("Start from New SFTTrainer")
+                self.batch_size = training_arguments.per_device_train_batch_size
+                training_arguments.save_strategy = "epoch"
+                training_arguments.save_total_limit = 2
+                max_seq_length = min(max_seq_length, tokenizer.model_max_length)
                 self.trainer = SFTTrainer(
                                 model=self.model,
                                 peft_config=peft_config,
@@ -116,6 +118,7 @@ class LLMFinetuner:
         except BaseException as err:
             gc.collect()
             print("Error in setting up Trainer, or no Trainer")
+            print(err)
             raise RuntimeError(err)
         
         
