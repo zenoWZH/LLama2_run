@@ -96,22 +96,29 @@ class LLMFinetuner:
         training_arguments.save_strategy = "epoch"
         self.split_dataset(formatted_dataset)
         try:
-            self.trainer = SFTTrainer(
-                            model=self.model,
-                            peft_config=peft_config,
-                            train_dataset=self.dataset['train'],
-                            eval_dataset=self.dataset['test'],
-                            args=training_arguments,
-                            max_seq_length=max_seq_length,
-                            tokenizer=tokenizer,
-                            packing=packing,
-                            dataset_text_field=dataset_text_field,
-                        )
+            if peft_config is None:
+                print("Resume from Checkpoints")
+                self.trainer.train(resume_from_checkpoint=True)
+            else:
+                print("Start from New SFTTrainer")
+                self.trainer = SFTTrainer(
+                                model=self.model,
+                                peft_config=peft_config,
+                                train_dataset=self.dataset['train'],
+                                eval_dataset=self.dataset['test'],
+                                args=training_arguments,
+                                max_seq_length=max_seq_length,
+                                tokenizer=tokenizer,
+                                packing=packing,
+                                dataset_text_field=dataset_text_field,
+                            )
+                self.trainer.train()
         except BaseException as err:
             gc.collect()
             print("Error in setting up Trainer, or no Trainer")
             raise RuntimeError(err)
-
+        
+        
         del self.dataset
         gc.collect()
         #print("\n")

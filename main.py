@@ -22,7 +22,7 @@ import time
 import warnings
 
 class FinetuneLoader:
-    def __init__(self, model_name, dataset_name, access_token, batch_size, output_dir="./results/", epochs=1):
+    def __init__(self, model_name, dataset_name, access_token, batch_size, output_dir="./results/checkpoints", epochs=1):
         self.model_name = model_name
         self.dataset_name = dataset_name
         self.access_token = access_token
@@ -32,8 +32,8 @@ class FinetuneLoader:
         # Use temporary variables for filename
         model_short_name = self.model_name.split('/')[-1]
         dataset_short_name = self.dataset_name.split('/')[-1]
-        self.logfile = f"./results/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}.log"
-        self.shattered_logfile = f"./results/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}_shard.log"
+        self.logfile = f"./results/logs/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}.log"
+        self.shattered_logfile = f"./results/logs/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}_shard.log"
         self.output_file = f"{output_dir}+{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}"
     
     def _log_time(self, prefix, seconds, log_file=None):
@@ -54,6 +54,23 @@ class FinetuneLoader:
         # Load dataset (you can process it here)
                 
         self.dataset_loader = DatasetFormatter(self.dataset_name)
+        self.dataset_loader.load_dataset()
+        ################################################################################
+        # Load the dataset
+        start_time = time.time()
+        self.formatted_dataset = self.dataset_loader.format_dataset()
+        # Load LLaMA tokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, token=access_token)
+        self.tokenizer.pad_token = self.tokenizer.eos_token
+        self.tokenizer.padding_side = "right" # Fix weird overflow issue with fp16 training
+        #self.tokenized_dataset = self.formatted_dataset.map(lambda examples: self.tokenizer(examples["text"]), batched=True)
+        self.data_loading_time = time.time() - start_time
+        self._log_time('Dataset preparing time', self.data_loading_time)
+        
+    def load_dataset_iterable(self):
+        # Load dataset (you can process it here)
+                
+        self.dataset_loader = DatasetFormatter(self.dataset_name, iterable=True )
         self.dataset_loader.load_dataset()
         ################################################################################
         # Load the dataset
@@ -232,7 +249,13 @@ class FinetuneLoader:
         finetuner.split_dataset(self.formatted_dataset)
         self.data_loading_time = time.time() - start_time
         self._log_time('Data split time', self.data_loading_time)
-        finetuner.tune()
+        finetuner.tune(self.formatted_dataset,
+                        peft_config=self.peft_config, \
+                        training_arguments=self.training_arguments, \
+                        tokenizer=self.tokenizer, \
+                        packing=self.packing, \
+                        max_seq_length=self.max_seq_length, \
+                        dataset_text_field="text")
         del finetuner
         gc.collect()
         return 0
@@ -248,23 +271,27 @@ class FinetuneLoader:
         num_shards = (len(self.formatted_dataset)+size_per_shard - 1) // size_per_shard
         print(f"===================Shard dataset into {num_shards} parts==================")
         # 手动数据切片和训练
-        for i in tqdm(range(0, num_shards)):
-            try:
-                sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=True)
-                finetuner.tune_step(sub_dataset,
+        try:
+            sub_dataset = self.formatted_dataset.shard(num_shards, 0, keep_in_memory=True, contiguous=True)
+            finetuner.tune_step(sub_dataset,
                                     peft_config=self.peft_config, \
                                     training_arguments=self.training_arguments, \
                                     tokenizer=self.tokenizer, \
                                     packing=self.packing, \
                                     max_seq_length=self.max_seq_length, \
                                     dataset_text_field="text")
-            except BaseException as err:
-                print('='*80)
-                print("ERROR!!!\n")
-                print(err)
-                print('='*80)
-                print("\n")
-                sys.exit(1)
+            
+            for i in tqdm(range(1, num_shards)):
+                sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=True)
+                finetuner.tune_step(sub_dataset)
+
+        except BaseException as err:
+            print('='*80)
+            print("ERROR!!!\n")
+            print(err)
+            print('='*80)
+            print("\n")
+            sys.exit(1)
         self.total_training_time = time.time() - start_time
         self._log_time('Total training time', self.total_training_time, log_file=self.shattered_logfile)
         return
