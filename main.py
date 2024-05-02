@@ -269,6 +269,7 @@ class FinetuneLoader:
                 print("\n")
                 sys.exit(1)
         self.total_training_time = time.time() - start_time
+        self._log_time('Trainer Training time', finetuner.training_time, log_file=self.shattered_logfile)
         self._log_time('Total training time', self.total_training_time, log_file=self.shattered_logfile)
         del finetuner
         return

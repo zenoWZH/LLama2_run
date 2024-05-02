@@ -20,6 +20,7 @@ class LLMFinetuner:
         self.step=0
         self.tokenizer = tokenizer
         self.max_seq_length = self.tokenizer.model_max_length
+        self.training_time = 0
         x = 1
         while(self.max_seq_length > 1):
             x *= 2
@@ -51,7 +52,6 @@ class LLMFinetuner:
         if formatted_dataset is not None and not ('train' in formatted_dataset.column_names):
             # 数据集通常包含训练和测试集，但如果需要自定义比例，可以使用以下方法
             train_test_split = formatted_dataset.train_test_split(test_size=0.1)
-
             # 创建一个新的数据集字典，包括训练集和测试集
             self.dataset = DatasetDict({
                 'train': train_test_split['train'],
@@ -97,7 +97,7 @@ class LLMFinetuner:
             raise RuntimeError(err)
     
     def tune_step(self, formatted_dataset, peft_config=None, training_arguments=None, packing=None, max_seq_length=None, dataset_text_field=None):
-        self.start_time = time.time()
+        start_time = time.time()
         # Set supervised fine-tuning parameters
         #
         self.split_dataset(formatted_dataset)
@@ -125,13 +125,14 @@ class LLMFinetuner:
             print("Error in setting up Trainer, or no Trainer")
             print(err)
             raise RuntimeError(err)
+
         self.trainer.train()
         self.model = self.trainer.model
         self.tokenizer = self.trainer.tokenizer
-        #del self.dataset
+
+        del self.trainer
         gc.collect()
-        #print("\n")
-        #print(f"Training Complete at batch={str(self.batch_size)} in shattered mode")
-        self.training_time = time.time() - self.start_time
-        self._log_time('Training time', self.training_time)
-        return self.model
+        
+        self.training_time += time.time() - start_time
+        
+        #return self.model, self.tokenizer
