@@ -10,7 +10,7 @@ import asyncio
 import gc
 
 class LLMFinetuner:
-    def __init__(self, model, access_token=None, batch_size=4, log_file="./temptest.txt", **training_args):
+    def __init__(self, model, tokenizer, access_token=None, batch_size=4, log_file="./log_temp.txt", **training_args):
         # Output directory where the model predictions and checkpoints will be stored
         self.model = model
         self.batch_size = batch_size
@@ -18,6 +18,14 @@ class LLMFinetuner:
         self.trainer = None
         self.dataset = None
         self.step=0
+        self.tokenizer = tokenizer
+        self.max_seq_length = self.tokenizer.model_max_length
+        x = 1
+        while(self.max_seq_length > 1):
+            x *= 2
+            self.max_seq_length = self.max_seq_length // 2
+        self.max_seq_length = x
+        
     def __del__(self):
         try:
             del self.trainer
@@ -58,7 +66,7 @@ class LLMFinetuner:
         else:
             self.dataset = formatted_dataset
         
-    def tune(self, peft_config, training_arguments, tokenizer, packing, max_seq_length, dataset_text_field):
+    def tune(self, peft_config, training_arguments, packing, max_seq_length, dataset_text_field):
         if not self.dataset:
             raise RuntimeError("Dataset not loaded")
         
@@ -88,12 +96,12 @@ class LLMFinetuner:
             gc.collect()
             raise RuntimeError(err)
     
-    def tune_step(self, formatted_dataset, peft_config=None, training_arguments=None, tokenizer=None, packing=None, max_seq_length=None, dataset_text_field=None):
+    def tune_step(self, formatted_dataset, peft_config=None, training_arguments=None, packing=None, max_seq_length=None, dataset_text_field=None):
         self.start_time = time.time()
         # Set supervised fine-tuning parameters
         #
         self.split_dataset(formatted_dataset)
-        max_seq_length = min(max_seq_length, tokenizer.model_max_length)
+        max_seq_len_trainer = min(self.max_seq_length, max_seq_length)
         self.batch_size = training_arguments.per_device_train_batch_size
         #training_arguments.save_strategy = "epoch"
         training_arguments.save_total_limit = 2
@@ -106,8 +114,8 @@ class LLMFinetuner:
                             train_dataset=self.dataset['train'],
                             eval_dataset=self.dataset['test'],
                             args=training_arguments,
-                            max_seq_length=max_seq_length,
-                            tokenizer=tokenizer,
+                            max_seq_length=max_seq_len_trainer,
+                            tokenizer=self.tokenizer,
                             packing=packing,
                             dataset_text_field=dataset_text_field,
                         )
@@ -118,10 +126,12 @@ class LLMFinetuner:
             print(err)
             raise RuntimeError(err)
         self.trainer.train()
+        self.model = self.trainer.model
+        self.tokenizer = self.trainer.tokenizer
         #del self.dataset
         gc.collect()
         #print("\n")
         #print(f"Training Complete at batch={str(self.batch_size)} in shattered mode")
         self.training_time = time.time() - self.start_time
         self._log_time('Training time', self.training_time)
-        #return self.model
+        return self.model

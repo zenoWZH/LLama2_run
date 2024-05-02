@@ -50,10 +50,10 @@ class FinetuneLoader:
         with open(log_file, "a+") as file:
             file.write(message)
     
-    def load_dataset(self):
+    def load_dataset(self, iterable=False):
         # Load dataset (you can process it here)
                 
-        self.dataset_loader = DatasetFormatter(self.dataset_name)
+        self.dataset_loader = DatasetFormatter(self.dataset_name, iterable=iterable)
         self.dataset_loader.load_dataset()
         ################################################################################
         # Load the dataset
@@ -61,23 +61,6 @@ class FinetuneLoader:
         self.formatted_dataset = self.dataset_loader.format_dataset()
         # Load LLaMA tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, token=access_token, padding="max_length", truncation=True)
-        self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.tokenizer.padding_side = "right" # Fix weird overflow issue with fp16 training
-        #self.tokenized_dataset = self.formatted_dataset.map(lambda examples: self.tokenizer(examples["text"]), batched=True)
-        self.data_loading_time = time.time() - start_time
-        self._log_time('Dataset preparing time', self.data_loading_time)
-        
-    def load_dataset_iterable(self):
-        # Load dataset (you can process it here)
-                
-        self.dataset_loader = DatasetFormatter(self.dataset_name, iterable=True )
-        self.dataset_loader.load_dataset()
-        ################################################################################
-        # Load the dataset
-        start_time = time.time()
-        self.formatted_dataset = self.dataset_loader.format_dataset()
-        # Load LLaMA tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, token=access_token)
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.tokenizer.padding_side = "right" # Fix weird overflow issue with fp16 training
         #self.tokenized_dataset = self.formatted_dataset.map(lambda examples: self.tokenizer(examples["text"]), batched=True)
@@ -245,14 +228,12 @@ class FinetuneLoader:
 
     def finetune_all(self):
         start_time = time.time()
-        finetuner = LLMFinetuner(self.model, self.batch_size)
-        finetuner.split_dataset(self.formatted_dataset)
+        finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
         self.data_loading_time = time.time() - start_time
         self._log_time('Data split time', self.data_loading_time)
         finetuner.tune(self.formatted_dataset,
                         peft_config=self.peft_config, \
                         training_arguments=self.training_arguments, \
-                        tokenizer=self.tokenizer, \
                         packing=self.packing, \
                         max_seq_length=self.max_seq_length, \
                         dataset_text_field="text")
@@ -262,7 +243,7 @@ class FinetuneLoader:
     
     def finetune_shattered(self, size_per_shard=1024):
         start_time = time.time()
-        finetuner = LLMFinetuner(self.model, self.batch_size, log_file=self.logfile)
+        finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
         if len(self.formatted_dataset)<=2:
             if len(self.formatted_dataset)==1:
                 self.formatted_dataset = self.formatted_dataset["train"]
@@ -277,7 +258,6 @@ class FinetuneLoader:
                 finetuner.tune_step(sub_dataset,
                                     peft_config=self.peft_config, \
                                     training_arguments=self.training_arguments, \
-                                    tokenizer=self.tokenizer, \
                                     packing=self.packing, \
                                     max_seq_length=self.max_seq_length, \
                                     dataset_text_field="text")
@@ -290,33 +270,12 @@ class FinetuneLoader:
                 sys.exit(1)
         self.total_training_time = time.time() - start_time
         self._log_time('Total training time', self.total_training_time, log_file=self.shattered_logfile)
+        del finetuner
         return
     
     def finetune_iterable(self):
         
         return
-    
-    def finetune(self, model_name, dataset_name, batch_size, access_token, shatter_dataset=False):
-        print("START MAIN PROCESS!!!")
-        print("\n")
-        try:
-            finetuner = LLMFinetuner(self.model, self.batch_size)
-            finetuner.tune(peft_config=self.peft_config, \
-                            training_arguments=self.training_arguments, \
-                            tokenizer=self.tokenizer, \
-                            packing=self.packing, \
-                            max_seq_length=self.max_seq_length, \
-                            dataset_text_field="text")
-        except BaseException as err:
-            print('='*80)
-            print("ERROR!!!\n")
-            print(err)
-            print('='*80)
-            print("\n")
-            sys.exit(1)
-        del finetuner
-        gc.collect()
-        sys.exit(0)
 
 print(__name__+" is running!!!")                
 if __name__ == "__main__":
