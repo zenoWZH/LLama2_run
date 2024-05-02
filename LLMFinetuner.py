@@ -106,7 +106,6 @@ class LLMFinetuner:
         #training_arguments.save_strategy = "epoch"
         training_arguments.save_total_limit = 2
         try:
-            #if self.step==0:
             print("Start from New SFTTrainer")               
             self.trainer = SFTTrainer(
                             model=self.model,
@@ -128,7 +127,7 @@ class LLMFinetuner:
         self.trainer.train()
         self.model = self.trainer.model
         self.tokenizer = self.trainer.tokenizer
-        #del self.dataset
+        del self.dataset
         gc.collect()
         #print("\n")
         #print(f"Training Complete at batch={str(self.batch_size)} in shattered mode")
