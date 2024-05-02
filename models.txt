@@ -8,8 +8,8 @@
 #stabilityai/stablelm-2-12b
 
 #Llama series
-NousResearch/Llama-2-7b-chat-hf
-NousResearch/Llama-2-13b-chat-hf
+#NousResearch/Llama-2-7b-chat-hf
+#NousResearch/Llama-2-13b-chat-hf
 meta-llama/Meta-Llama-3-8B
 
 #MPT-30b
@@ -19,6 +19,6 @@ mosaicml/mpt-30b
 tiiuae/falcon-40b
 
 #Mistral series
-mistralai/Mistral-7B-Instruct-v0.2
+#mistralai/Mistral-7B-Instruct-v0.2
 mistralai/Mixtral-8x7B-Instruct-v0.1
-mistralai/Mixtral-8x22B-v0.1
+#mistralai/Mixtral-8x22B-v0.1

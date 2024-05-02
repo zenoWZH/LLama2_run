@@ -1,7 +1,8 @@
 from datasets import load_dataset, concatenate_datasets
 class DatasetFormatter:
-    def __init__(self, dataset_name):
+    def __init__(self, dataset_name, iterable=False):
         self.dataset_name = dataset_name
+        self.iterable = iterable
         return
 
     def mmlu_formatting(self, example):
@@ -49,15 +50,15 @@ class DatasetFormatter:
     
     def load_dataset(self):
         if self.dataset_name == "cais/mmlu":
-            self.dataset = load_dataset("cais/mmlu", name = "all",  split="auxiliary_train")
+            self.dataset = load_dataset("cais/mmlu", name = "all",  split="auxiliary_train", streaming=self.iterable)
         elif self.dataset_name == "databricks/databricks-dolly-15k":
-            self.dataset = load_dataset("databricks/databricks-dolly-15k", 'all')
+            self.dataset = load_dataset("databricks/databricks-dolly-15k", 'all', streaming=self.iterable)
         elif self.dataset_name == "BelleGroup/train_1M_CN":
-            self.dataset = load_dataset("BelleGroup/train_1M_CN", 'all')
+            self.dataset = load_dataset("BelleGroup/train_1M_CN", 'all', streaming=self.iterable)
         elif self.dataset_name == "BelleGroup/train_0.5M_CN":
-            self.dataset = load_dataset("BelleGroup/train_0.5M_CN",  'all')
-        elif self.dataset_name == "BelleGroup/test_1M_CN":
-            self.dataset = load_dataset("BelleGroup/test_1M_CN",  'all')
+            self.dataset = load_dataset("BelleGroup/train_0.5M_CN",  'all', streaming=self.iterable)
+        elif self.dataset_name == "BelleGroup/train_3.5M_CN":
+            self.dataset = load_dataset("BelleGroup/train_3.5M_CN",  'all', streaming=self.iterable)
         elif self.dataset_name == "m-a-p/COIG-CQIA":
             self.dataset = load_dataset("m-a-p/COIG-CQIA", 'chinese_traditional', split="train")
             loadlist = ['coig_pc', 'exam', 'finance', 'douban', 'human_value', 'logi_qa', 'ruozhiba', 'segmentfault', 'wiki', 'wikihow', 'xhs', 'zhihu']
@@ -67,7 +68,7 @@ class DatasetFormatter:
         else:
             print("Dataset name not recognized.")
             try:
-                self.dataset = load_dataset(self.dataset_name, split="train")
+                self.dataset = load_dataset(self.dataset_name, split="train", streaming=self.iterable)
                 self.dataset = concatenate_datasets([self.dataset, load_dataset(self.dataset_name, split="test")])
             except BaseException as err:
                 print(err)
@@ -86,4 +87,4 @@ class DatasetFormatter:
             return self.dataset.map(self.conversation_formatting)
         else:
             print("Dataset name not recognized.")
-            return self.dataset
+            return self.dataset.with_format("torch")
