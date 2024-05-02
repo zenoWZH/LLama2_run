@@ -17,7 +17,7 @@ class LLMFinetuner:
         self.log_filename = log_file
         self.trainer = None
         self.dataset = None
-    
+        self.step=0
     def __del__(self):
         try:
             del self.trainer
@@ -93,39 +93,35 @@ class LLMFinetuner:
         # Set supervised fine-tuning parameters
         #
         self.split_dataset(formatted_dataset)
+        max_seq_length = min(max_seq_length, tokenizer.model_max_length)
+        self.batch_size = training_arguments.per_device_train_batch_size
+        #training_arguments.save_strategy = "epoch"
+        training_arguments.save_total_limit = 2
         try:
-            if training_arguments is None:
-                print("Resume from Checkpoints")
-                self.trainer.train(resume_from_checkpoint=True)
-            else:
-                print("Start from New SFTTrainer")
-                self.batch_size = training_arguments.per_device_train_batch_size
-                training_arguments.save_strategy = "epoch"
-                training_arguments.save_total_limit = 2
-                max_seq_length = min(max_seq_length, tokenizer.model_max_length)
-                self.trainer = SFTTrainer(
-                                model=self.model,
-                                peft_config=peft_config,
-                                train_dataset=self.dataset['train'],
-                                eval_dataset=self.dataset['test'],
-                                args=training_arguments,
-                                max_seq_length=max_seq_length,
-                                tokenizer=tokenizer,
-                                packing=packing,
-                                dataset_text_field=dataset_text_field,
-                            )
-                self.trainer.train()
+            #if self.step==0:
+            print("Start from New SFTTrainer")               
+            self.trainer = SFTTrainer(
+                            model=self.model,
+                            peft_config=peft_config,
+                            train_dataset=self.dataset['train'],
+                            eval_dataset=self.dataset['test'],
+                            args=training_arguments,
+                            max_seq_length=max_seq_length,
+                            tokenizer=tokenizer,
+                            packing=packing,
+                            dataset_text_field=dataset_text_field,
+                        )
+            self.step+=1
         except BaseException as err:
             gc.collect()
             print("Error in setting up Trainer, or no Trainer")
             print(err)
             raise RuntimeError(err)
-        
-        
-        del self.dataset
+        self.trainer.train()
+        #del self.dataset
         gc.collect()
         #print("\n")
         #print(f"Training Complete at batch={str(self.batch_size)} in shattered mode")
         self.training_time = time.time() - self.start_time
         self._log_time('Training time', self.training_time)
-        return self.model
+        #return self.model

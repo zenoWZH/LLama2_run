@@ -240,7 +240,7 @@ class FinetuneLoader:
             warmup_ratio=warmup_ratio,
             group_by_length=group_by_length,
             lr_scheduler_type=lr_scheduler_type,
-            logging_dir=self.output_dir+"logs",
+            logging_dir=self.output_dir+"/logs",
         )
 
     def finetune_all(self):
@@ -268,30 +268,26 @@ class FinetuneLoader:
                 self.formatted_dataset = self.formatted_dataset["train"]
             else:
                 self.formatted_dataset = concatenate_datasets([self.formatted_dataset["train"], self.formatted_dataset["test"]])
-        num_shards = (len(self.formatted_dataset)+size_per_shard - 1) // size_per_shard
-        print(f"===================Shard dataset into {num_shards} parts==================")
+        num_shards = (len(self.formatted_dataset)+size_per_shard-1) // size_per_shard
+        print(f"===================Shard dataset {self.dataset_name.split('/')[-1]} into {num_shards} parts==================")
         # 手动数据切片和训练
-        try:
-            sub_dataset = self.formatted_dataset.shard(num_shards, 0, keep_in_memory=True, contiguous=True)
-            finetuner.tune_step(sub_dataset,
+        for i in tqdm(range(0, num_shards)):
+            try:
+                sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=False)
+                finetuner.tune_step(sub_dataset,
                                     peft_config=self.peft_config, \
                                     training_arguments=self.training_arguments, \
                                     tokenizer=self.tokenizer, \
                                     packing=self.packing, \
                                     max_seq_length=self.max_seq_length, \
                                     dataset_text_field="text")
-            
-            for i in tqdm(range(1, num_shards)):
-                sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=True)
-                finetuner.tune_step(sub_dataset)
-
-        except BaseException as err:
-            print('='*80)
-            print("ERROR!!!\n")
-            print(err)
-            print('='*80)
-            print("\n")
-            sys.exit(1)
+            except BaseException as err:
+                print('='*80)
+                print("ERROR!!!\n")
+                print(err)
+                print('='*80)
+                print("\n")
+                sys.exit(1)
         self.total_training_time = time.time() - start_time
         self._log_time('Total training time', self.total_training_time, log_file=self.shattered_logfile)
         return

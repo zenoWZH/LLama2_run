@@ -11,3 +11,5 @@
 results/logs/*
 
 *.txt
+
+results/checkpoints/*
