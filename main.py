@@ -241,7 +241,7 @@ class FinetuneLoader:
         gc.collect()
         return 0
     
-    def finetune_shattered(self, size_per_shard=1024):
+    def finetune_shard(self, size_per_shard=1024):
         start_time = time.time()
         finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
         if len(self.formatted_dataset)<=2:
@@ -299,5 +299,6 @@ if __name__ == "__main__":
     ft_singleGPU = FinetuneLoader(model_name, dataset_name, access_token, batch_size)
     ft_singleGPU.load_model()
     ft_singleGPU.load_dataset()
-    ft_singleGPU.finetune_shattered()
+    #ft_singleGPU.finetune_all()
+    ft_singleGPU.finetune_shard()
     sys.exit(0)
