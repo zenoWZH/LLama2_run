@@ -107,7 +107,7 @@ class LLMFinetuner:
         training_arguments.save_total_limit = 2
         try:
             #if self.step==0:
-            print("Start from New SFTTrainer")               
+            #print("Start from New SFTTrainer")               
             self.trainer = SFTTrainer(
                             model=self.model,
                             peft_config=peft_config,
@@ -119,17 +119,22 @@ class LLMFinetuner:
                             packing=packing,
                             dataset_text_field=dataset_text_field,
                         )
-            self.step+=1
         except BaseException as err:
             gc.collect()
-            print("Error in setting up Trainer, or no Trainer")
             print(err)
-            raise RuntimeError(err)
+            raise RuntimeError("Error in setting up Trainer, or no Trainer")
 
-        self.trainer.train()
-        self.model = self.trainer.model
-        self.tokenizer = self.trainer.tokenizer
+        try:
+            self.step+=1
+            self.trainer.train()
+            self.model = self.trainer.model
+            self.tokenizer = self.trainer.tokenizer
+        except BaseException as err:
+            gc.collect()
+            print(err)
+            raise RuntimeError("Error in training model with shard data")
 
+        
         del self.trainer
         gc.collect()
         

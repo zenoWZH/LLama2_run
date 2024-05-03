@@ -254,8 +254,8 @@ class FinetuneLoader:
         num_shards = (len(self.formatted_dataset)+size_per_shard-1) // size_per_shard
         print(f"===================Shard dataset {self.dataset_name.split('/')[-1]} into {num_shards} parts==================")
         # 手动数据切片和训练
-        for i in tqdm(range(0, num_shards)):
-            try:
+        try:
+            for i in range(0, num_shards):
                 sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=False)
                 finetuner.tune_step(sub_dataset,
                                     peft_config=self.peft_config, \
@@ -263,24 +263,22 @@ class FinetuneLoader:
                                     packing=self.packing, \
                                     max_seq_length=self.max_seq_length, \
                                     dataset_text_field="text")
-            except BaseException as err:
-                print('='*80)
-                print("ERROR!!!\n")
-                print(err)
-                print('='*80)
-                print("\n")
-                sys.exit(1)
+        except BaseException as err:
+            print('='*80)
+            print("ERROR with Finetune Loader with shard data!!!\n")
+            print('='*80)
+            print("\n")
+            raise RuntimeError(err)
+
         self.total_training_time = time.time() - start_time
         self._log_time('Trainer Training time', finetuner.training_time, log_file=self.shattered_logfile)
         self._log_time('Total training time', self.total_training_time, log_file=self.shattered_logfile)
-        del finetuner
-        return
+        #del finetuner
     
     def finetune_iterable(self):
         
         return
-
-print(__name__+" is running!!!")                
+          
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
     default_access_token = ConfigReader("access_token.txt").read_lines_without_comments()[0]
@@ -298,10 +296,23 @@ if __name__ == "__main__":
             access_token = default_access_token
         else:
             access_token = sys.argv[4]
-
-    ft_singleGPU = FinetuneLoader(model_name, dataset_name, access_token, batch_size)
-    ft_singleGPU.load_model()
-    ft_singleGPU.load_dataset()
-    #ft_singleGPU.finetune_all()
-    ft_singleGPU.finetune_shard()
+    
+    print(__name__+" is running!!! with batch size of "+str(batch_size)+".\n")      
+    try:
+        ft_singleGPU = FinetuneLoader(model_name, dataset_name, access_token, batch_size)
+        ft_singleGPU.load_model()
+        ft_singleGPU.load_dataset()
+        #ft_singleGPU.finetune_all()
+        exit_code = ft_singleGPU.finetune_shard()
+        if exit_code == 0:
+            print("Training Successful!!!")
+        else:
+            print("Training Failed!!!")
+            sys.exit(1)
+    except BaseException as err:
+        print('='*80)
+        print("ERROR with Main Process!!!\n")
+        print('='*80)
+        print("\n")
+        sys.exit(1)
     sys.exit(0)

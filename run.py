@@ -16,6 +16,11 @@ def clear_cache():
     print("Cache cleared") 
 
 def retry_finetuning(model, dataset, batch_size=4):
+    print('='*80)
+    print("\n")
+    print(f"Try model {model.split('/')[-1]} on dataset {dataset.split('/')[-1]} again with batch_size = {batch_size}")
+    print('='*80)
+    print("\n")
     torch.cuda.empty_cache()
     syscode = os.system(f"poetry run python main.py {model} {dataset} {str(batch_size)}")
     if syscode == 0:
@@ -50,12 +55,6 @@ if __name__ == "__main__":
                 print("Training Successful!!!")
             else:
                 clear_cache()
-                print('='*80)
-                print("\n")
-                print(f"Try model {model.split('/')[-1]} on dataset {dataset.split('/')[-1]} again with batch_size = {batch_size}")
-                print('='*80)
-                print("\n")
                 retry_finetuning(model, dataset, batch_size)
-
             time.sleep(5)
         
