@@ -10,7 +10,7 @@ import asyncio
 import gc
 
 class LLMFinetuner:
-    def __init__(self, model, access_token=None, batch_size=4, log_file="./temptest.txt", **training_args):
+    def __init__(self, model, tokenizer, access_token=None, batch_size=4, log_file="./log_temp.txt", **training_args):
         # Output directory where the model predictions and checkpoints will be stored
         self.model = model
         self.batch_size = batch_size
@@ -18,6 +18,15 @@ class LLMFinetuner:
         self.trainer = None
         self.dataset = None
         self.step=0
+        self.tokenizer = tokenizer
+        self.max_seq_length = self.tokenizer.model_max_length
+        self.training_time = 0
+        x = 1
+        while(self.max_seq_length > 1):
+            x *= 2
+            self.max_seq_length = self.max_seq_length // 2
+        self.max_seq_length = x
+        
     def __del__(self):
         try:
             del self.trainer
@@ -43,7 +52,6 @@ class LLMFinetuner:
         if formatted_dataset is not None and not ('train' in formatted_dataset.column_names):
             # 数据集通常包含训练和测试集，但如果需要自定义比例，可以使用以下方法
             train_test_split = formatted_dataset.train_test_split(test_size=0.1)
-
             # 创建一个新的数据集字典，包括训练集和测试集
             self.dataset = DatasetDict({
                 'train': train_test_split['train'],
@@ -58,7 +66,7 @@ class LLMFinetuner:
         else:
             self.dataset = formatted_dataset
         
-    def tune(self, peft_config, training_arguments, tokenizer, packing, max_seq_length, dataset_text_field):
+    def tune(self, peft_config, training_arguments, packing, max_seq_length, dataset_text_field):
         if not self.dataset:
             raise RuntimeError("Dataset not loaded")
         
@@ -88,40 +96,48 @@ class LLMFinetuner:
             gc.collect()
             raise RuntimeError(err)
     
-    def tune_step(self, formatted_dataset, peft_config=None, training_arguments=None, tokenizer=None, packing=None, max_seq_length=None, dataset_text_field=None):
-        self.start_time = time.time()
+    def tune_step(self, formatted_dataset, peft_config=None, training_arguments=None, packing=None, max_seq_length=None, dataset_text_field=None):
+        start_time = time.time()
         # Set supervised fine-tuning parameters
         #
         self.split_dataset(formatted_dataset)
-        max_seq_length = min(max_seq_length, tokenizer.model_max_length)
+        max_seq_len_trainer = min(self.max_seq_length, max_seq_length)
         self.batch_size = training_arguments.per_device_train_batch_size
         #training_arguments.save_strategy = "epoch"
         training_arguments.save_total_limit = 2
         try:
             #if self.step==0:
-            print("Start from New SFTTrainer")               
+            #print("Start from New SFTTrainer")               
             self.trainer = SFTTrainer(
                             model=self.model,
                             peft_config=peft_config,
                             train_dataset=self.dataset['train'],
                             eval_dataset=self.dataset['test'],
                             args=training_arguments,
-                            max_seq_length=max_seq_length,
-                            tokenizer=tokenizer,
+                            max_seq_length=max_seq_len_trainer,
+                            tokenizer=self.tokenizer,
                             packing=packing,
                             dataset_text_field=dataset_text_field,
                         )
-            self.step+=1
         except BaseException as err:
             gc.collect()
-            print("Error in setting up Trainer, or no Trainer")
             print(err)
-            raise RuntimeError(err)
-        self.trainer.train()
-        #del self.dataset
+            raise RuntimeError("Error in setting up Trainer, or no Trainer")
+
+        try:
+            self.step+=1
+            self.trainer.train()
+            self.model = self.trainer.model
+            self.tokenizer = self.trainer.tokenizer
+        except BaseException as err:
+            gc.collect()
+            print(err)
+            raise RuntimeError("Error in training model with shard data")
+
+        
+        del self.trainer
         gc.collect()
-        #print("\n")
-        #print(f"Training Complete at batch={str(self.batch_size)} in shattered mode")
-        self.training_time = time.time() - self.start_time
-        self._log_time('Training time', self.training_time)
-        #return self.model
+        
+        self.training_time += time.time() - start_time
+        
+        #return self.model, self.tokenizer

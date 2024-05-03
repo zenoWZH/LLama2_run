@@ -32,6 +32,8 @@ class FinetuneLoader:
         # Use temporary variables for filename
         model_short_name = self.model_name.split('/')[-1]
         dataset_short_name = self.dataset_name.split('/')[-1]
+        if not os.path.exists("./results/logs/"):
+            os.makedirs("./results/logs")
         self.logfile = f"./results/logs/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}.log"
         self.shattered_logfile = f"./results/logs/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}_shard.log"
         self.output_file = f"{output_dir}+{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}"
@@ -50,10 +52,10 @@ class FinetuneLoader:
         with open(log_file, "a+") as file:
             file.write(message)
     
-    def load_dataset(self):
+    def load_dataset(self, iterable=False):
         # Load dataset (you can process it here)
                 
-        self.dataset_loader = DatasetFormatter(self.dataset_name)
+        self.dataset_loader = DatasetFormatter(self.dataset_name, iterable=iterable)
         self.dataset_loader.load_dataset()
         ################################################################################
         # Load the dataset
@@ -61,23 +63,6 @@ class FinetuneLoader:
         self.formatted_dataset = self.dataset_loader.format_dataset()
         # Load LLaMA tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, token=access_token, padding="max_length", truncation=True)
-        self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.tokenizer.padding_side = "right" # Fix weird overflow issue with fp16 training
-        #self.tokenized_dataset = self.formatted_dataset.map(lambda examples: self.tokenizer(examples["text"]), batched=True)
-        self.data_loading_time = time.time() - start_time
-        self._log_time('Dataset preparing time', self.data_loading_time)
-        
-    def load_dataset_iterable(self):
-        # Load dataset (you can process it here)
-                
-        self.dataset_loader = DatasetFormatter(self.dataset_name, iterable=True )
-        self.dataset_loader.load_dataset()
-        ################################################################################
-        # Load the dataset
-        start_time = time.time()
-        self.formatted_dataset = self.dataset_loader.format_dataset()
-        # Load LLaMA tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, token=access_token)
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.tokenizer.padding_side = "right" # Fix weird overflow issue with fp16 training
         #self.tokenized_dataset = self.formatted_dataset.map(lambda examples: self.tokenizer(examples["text"]), batched=True)
@@ -245,14 +230,12 @@ class FinetuneLoader:
 
     def finetune_all(self):
         start_time = time.time()
-        finetuner = LLMFinetuner(self.model, self.batch_size)
-        finetuner.split_dataset(self.formatted_dataset)
+        finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
         self.data_loading_time = time.time() - start_time
         self._log_time('Data split time', self.data_loading_time)
         finetuner.tune(self.formatted_dataset,
                         peft_config=self.peft_config, \
                         training_arguments=self.training_arguments, \
-                        tokenizer=self.tokenizer, \
                         packing=self.packing, \
                         max_seq_length=self.max_seq_length, \
                         dataset_text_field="text")
@@ -260,9 +243,9 @@ class FinetuneLoader:
         gc.collect()
         return 0
     
-    def finetune_shattered(self, size_per_shard=1024):
+    def finetune_shard(self, size_per_shard=1024):
         start_time = time.time()
-        finetuner = LLMFinetuner(self.model, self.batch_size, log_file=self.logfile)
+        finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
         if len(self.formatted_dataset)<=2:
             if len(self.formatted_dataset)==1:
                 self.formatted_dataset = self.formatted_dataset["train"]
@@ -271,54 +254,31 @@ class FinetuneLoader:
         num_shards = (len(self.formatted_dataset)+size_per_shard-1) // size_per_shard
         print(f"===================Shard dataset {self.dataset_name.split('/')[-1]} into {num_shards} parts==================")
         # 手动数据切片和训练
-        for i in tqdm(range(0, num_shards)):
-            try:
+        try:
+            for i in range(0, num_shards):
                 sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=False)
                 finetuner.tune_step(sub_dataset,
                                     peft_config=self.peft_config, \
                                     training_arguments=self.training_arguments, \
-                                    tokenizer=self.tokenizer, \
                                     packing=self.packing, \
                                     max_seq_length=self.max_seq_length, \
                                     dataset_text_field="text")
-            except BaseException as err:
-                print('='*80)
-                print("ERROR!!!\n")
-                print(err)
-                print('='*80)
-                print("\n")
-                sys.exit(1)
+        except BaseException as err:
+            print('='*80)
+            print("ERROR with Finetune Loader with shard data!!!\n")
+            print('='*80)
+            print("\n")
+            raise RuntimeError(err)
+
         self.total_training_time = time.time() - start_time
+        self._log_time('Trainer Training time', finetuner.training_time, log_file=self.shattered_logfile)
         self._log_time('Total training time', self.total_training_time, log_file=self.shattered_logfile)
-        return
+        #del finetuner
     
     def finetune_iterable(self):
         
         return
-    
-    def finetune(self, model_name, dataset_name, batch_size, access_token, shatter_dataset=False):
-        print("START MAIN PROCESS!!!")
-        print("\n")
-        try:
-            finetuner = LLMFinetuner(self.model, self.batch_size)
-            finetuner.tune(peft_config=self.peft_config, \
-                            training_arguments=self.training_arguments, \
-                            tokenizer=self.tokenizer, \
-                            packing=self.packing, \
-                            max_seq_length=self.max_seq_length, \
-                            dataset_text_field="text")
-        except BaseException as err:
-            print('='*80)
-            print("ERROR!!!\n")
-            print(err)
-            print('='*80)
-            print("\n")
-            sys.exit(1)
-        del finetuner
-        gc.collect()
-        sys.exit(0)
-
-print(__name__+" is running!!!")                
+          
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
     default_access_token = ConfigReader("access_token.txt").read_lines_without_comments()[0]
@@ -336,9 +296,23 @@ if __name__ == "__main__":
             access_token = default_access_token
         else:
             access_token = sys.argv[4]
-
-    ft_singleGPU = FinetuneLoader(model_name, dataset_name, access_token, batch_size)
-    ft_singleGPU.load_model()
-    ft_singleGPU.load_dataset()
-    ft_singleGPU.finetune_shattered()
+    
+    print(__name__+" is running!!! with batch size of "+str(batch_size)+".\n")      
+    try:
+        ft_singleGPU = FinetuneLoader(model_name, dataset_name, access_token, batch_size)
+        ft_singleGPU.load_model()
+        ft_singleGPU.load_dataset()
+        #ft_singleGPU.finetune_all()
+        exit_code = ft_singleGPU.finetune_shard()
+        if exit_code == 0:
+            print("Training Successful!!!")
+        else:
+            print("Training Failed!!!")
+            sys.exit(1)
+    except BaseException as err:
+        print('='*80)
+        print("ERROR with Main Process!!!\n")
+        print('='*80)
+        print("\n")
+        sys.exit(1)
     sys.exit(0)
