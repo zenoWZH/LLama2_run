@@ -269,11 +269,13 @@ class FinetuneLoader:
             print('='*80)
             print("\n")
             raise RuntimeError(err)
+            return 1
 
         self.total_training_time = time.time() - start_time
         self._log_time('Trainer Training time', finetuner.training_time, log_file=self.shattered_logfile)
         self._log_time('Total training time', self.total_training_time, log_file=self.shattered_logfile)
         #del finetuner
+        return 0
     
     def finetune_iterable(self):
         
@@ -306,6 +308,7 @@ if __name__ == "__main__":
         exit_code = ft_singleGPU.finetune_shard()
         if exit_code == 0:
             print("Training Successful!!!")
+            sys.exit(0)
         else:
             print("Training Failed!!!")
             sys.exit(1)
