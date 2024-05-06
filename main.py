@@ -145,7 +145,7 @@ class FinetuneLoader:
         save_steps = 0
 
         # Log every X updates steps
-        logging_steps = 100
+        logging_steps = 25
 
         ################################################################################
         # SFT parameters
@@ -153,12 +153,13 @@ class FinetuneLoader:
         self.max_seq_length = 4096
 
         # Pack multiple short examples in the same input sequence to increase efficiency
-        self.packing = True
+        self.packing = False
 
         # Load the entire model on the GPU 0
         device_map = {"": 0}
         # Load the model
         start_time = time.time()
+        
         ### Load model with QLoRA configuration
         compute_dtype = getattr(torch, bnb_4bit_compute_dtype)
 
@@ -243,7 +244,7 @@ class FinetuneLoader:
         gc.collect()
         return 0
     
-    def finetune_shard(self, size_per_shard=1024):
+    def finetune_shard_stepped(self, size_per_shard=1024):
         start_time = time.time()
         finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
         if len(self.formatted_dataset)<=2:
@@ -256,7 +257,7 @@ class FinetuneLoader:
         # 手动数据切片和训练
         try:
             for i in range(0, num_shards):
-                sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=False)
+                sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=True)
                 finetuner.tune_step(sub_dataset,
                                     peft_config=self.peft_config, \
                                     training_arguments=self.training_arguments, \
@@ -265,11 +266,41 @@ class FinetuneLoader:
                                     dataset_text_field="text")
         except BaseException as err:
             print('='*80)
+            print("ERROR with Finetune Loader with shard data in steps!!!\n")
+            print('='*80)
+            print("\n")
+            raise RuntimeError(err)
+
+        self.total_training_time = time.time() - start_time
+        self._log_time('Trainer Training time', finetuner.training_time, log_file=self.shattered_logfile)
+        self._log_time('Total training time', self.total_training_time, log_file=self.shattered_logfile)
+        #del finetuner
+        return 0
+    
+    def finetune_shard(self, size_per_shard=1024):
+        start_time = time.time()
+        finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
+        if len(self.formatted_dataset)<=2:
+            if len(self.formatted_dataset)==1:
+                self.formatted_dataset = self.formatted_dataset["train"]
+            else:
+                self.formatted_dataset = concatenate_datasets([self.formatted_dataset["train"], self.formatted_dataset["test"]])
+        num_shards = (len(self.formatted_dataset)+size_per_shard-1) // size_per_shard
+        print(f"===================Shard dataset {self.dataset_name.split('/')[-1]} into {num_shards} parts==================")
+        try:
+            finetuner.tune_shard(formatted_dataset=self.formatted_dataset, \
+                                peft_config=self.peft_config, \
+                                training_arguments=self.training_arguments, \
+                                packing=self.packing, \
+                                max_seq_length=self.max_seq_length, \
+                                dataset_text_field="text", \
+                                num_shards=num_shards)
+        except BaseException as err:
+            print('='*80)
             print("ERROR with Finetune Loader with shard data!!!\n")
             print('='*80)
             print("\n")
             raise RuntimeError(err)
-            return 1
 
         self.total_training_time = time.time() - start_time
         self._log_time('Trainer Training time', finetuner.training_time, log_file=self.shattered_logfile)

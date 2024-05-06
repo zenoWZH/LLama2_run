@@ -1,7 +1,7 @@
 # LLMFinetuner.py
 import time
 #from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments
-from datasets import load_dataset, DatasetDict
+from datasets import load_dataset, DatasetDict, Dataset
 import os
 import torch
 
@@ -141,3 +141,46 @@ class LLMFinetuner:
         self.training_time += time.time() - start_time
         
         #return self.model, self.tokenizer
+
+    def tune_shard(self, formatted_dataset, peft_config, training_arguments, packing, max_seq_length, dataset_text_field, num_shards=1):
+        start_time = time.time()
+        max_seq_len_trainer = min(self.max_seq_length, max_seq_length)
+        self.batch_size = training_arguments.per_device_train_batch_size
+        training_arguments.save_total_limit = 2
+
+        for i in range(num_shards):
+            try:
+                sub_dataset = formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=True)
+                print("Dataset sharded, size is: ", len(sub_dataset))
+                self.split_dataset(sub_dataset)
+                self.trainer = SFTTrainer(
+                                model=self.model,
+                                peft_config=peft_config,
+                                train_dataset=self.dataset['train'],
+                                eval_dataset=self.dataset['test'],
+                                args=training_arguments,
+                                max_seq_length=max_seq_len_trainer,
+                                tokenizer=self.tokenizer,
+                                packing=packing,
+                                dataset_text_field=dataset_text_field,
+                            )
+            except BaseException as err:
+                gc.collect()
+                print(err)
+                raise RuntimeError("Error in setting up Trainer, or no Trainer")
+
+            try:
+                self.step+=1
+                self.trainer.train()
+                self.model = self.trainer.model
+                self.tokenizer = self.trainer.tokenizer
+            except BaseException as err:
+                gc.collect()
+                print(err)
+                raise RuntimeError("Error in training model with shard data")
+
+            
+            del self.trainer
+            gc.collect()
+        
+        self.training_time += time.time() - start_time
