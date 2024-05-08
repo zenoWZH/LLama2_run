@@ -2,7 +2,7 @@
 #TinyLlama/TinyLlama-1.1B-Chat-v1.0
 
 #gemma 2b
-#google/gemma-2b
+google/gemma-2b
 
 #stablelm-12b
 #stabilityai/stablelm-2-12b
@@ -19,6 +19,6 @@ mosaicml/mpt-30b
 tiiuae/falcon-40b
 
 #Mistral series
-mistralai/Mistral-7B-Instruct-v0.2
+#mistralai/Mistral-7B-Instruct-v0.2
 mistralai/Mixtral-8x7B-Instruct-v0.1
-mistralai/Mixtral-8x22B-v0.1
+#mistralai/Mixtral-8x22B-v0.1

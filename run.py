@@ -16,13 +16,12 @@ def clear_cache():
     print("Cache cleared") 
 
 def retry_finetuning(model, dataset, batch_size=4):
+    print('='*80)
+    print("\n")
+    print(f"Try model {model.split('/')[-1]} on dataset {dataset.split('/')[-1]} again with batch_size = {batch_size}")
+    print('='*80)
+    print("\n")
     torch.cuda.empty_cache()
-    
-    print('='*80)
-    print("\n")
-    print(f"Try again with batch_size = {batch_size}")
-    print('='*80)
-    print("\n")
     syscode = os.system(f"poetry run python main.py {model} {dataset} {str(batch_size)}")
     if syscode == 0:
             print("Training Successful!!!")
@@ -33,7 +32,7 @@ def retry_finetuning(model, dataset, batch_size=4):
         else:
             retry_finetuning(model, dataset, batch_size//2)
         
-print(__name__)
+
 if __name__ == "__main__":
     print("RUNNING!!!")
     #print("\n")
@@ -41,14 +40,14 @@ if __name__ == "__main__":
     dataset_reader = ConfigReader("datasets.txt")
     models = model_reader.read_lines_without_comments()
     datasets = dataset_reader.read_lines_without_comments()
-    batch_size = 8
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
+    batch_size = 16
     for model in tqdm(models, desc="Models"):
         for dataset in tqdm(datasets, desc="Datasets", leave=False):
             os.system('clear')
             print('='*80)
             print("\n")
-            print(f"Training on model {model} with dataset {dataset}")
-            print("Start with batch_size = 8\n")
+            print(f"Training on model {model.split('/')[-1]} with dataset {dataset.split('/')[-1]} in batch_size = {batch_size}")
             print('='*80)
             print("\n")
             syscode = os.system(f"poetry run python main.py {model} {dataset} {str(batch_size)}")
@@ -57,6 +56,5 @@ if __name__ == "__main__":
             else:
                 clear_cache()
                 retry_finetuning(model, dataset, batch_size)
-
             time.sleep(5)
         
