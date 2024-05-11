@@ -345,7 +345,7 @@ if __name__ == "__main__":
         #ft_singleGPU.finetune_all()
         exit_code = ft_singleGPU.finetune_synthesize()
         if exit_code == 0:
-            print("Training Successful!!!")
+            print("Synthesize Training Successful!!!")
             sys.exit(0)
         else:
             print("Training Failed!!!")
