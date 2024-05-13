@@ -2,7 +2,7 @@ from ConfigReader import ConfigReader
 import os
 import time
 import sys
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import torch
 import shutil
 
