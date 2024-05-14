@@ -14,7 +14,7 @@ from transformers import (
 
 import os
 import sys
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import gc
 import torch
 import shutil
@@ -34,9 +34,9 @@ class FinetuneLoader:
         dataset_short_name = self.dataset_name.split('/')[-1]
         if not os.path.exists("./results/logs/"):
             os.makedirs("./results/logs")
-        self.logfile = f"./results/logs/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}.log"
-        self.shattered_logfile = f"./results/logs/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}_shard.log"
-        self.output_file = f"{output_dir}+{model_short_name}_{dataset_short_name}_batch{self.batch_size}_epochs{self.training_epochs}"
+        self.logfile = f"./results/logs/{model_short_name}_{dataset_short_name}_batch{self.batch_size}.log"
+        self.shattered_logfile = f"./results/logs/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_shard.log"
+        self.output_file = f"{output_dir}+{model_short_name}_{dataset_short_name}_batch{self.batch_size}"
     
     def _log_time(self, prefix, seconds, log_file=None):
         if not log_file:
@@ -66,6 +66,12 @@ class FinetuneLoader:
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.tokenizer.padding_side = "right" # Fix weird overflow issue with fp16 training
         #self.tokenized_dataset = self.formatted_dataset.map(lambda examples: self.tokenizer(examples["text"]), batched=True)
+        if len(self.formatted_dataset)<=2:
+            if len(self.formatted_dataset)==1:
+                self.formatted_dataset = self.formatted_dataset["train"]
+            else:
+                self.formatted_dataset = concatenate_datasets([self.formatted_dataset["train"], self.formatted_dataset["test"]])
+        self.formatted_dataset = self.formatted_dataset.shuffle()
         self.data_loading_time = time.time() - start_time
         self._log_time('Dataset preparing time', self.data_loading_time)
         
@@ -145,7 +151,7 @@ class FinetuneLoader:
         save_steps = 0
 
         # Log every X updates steps
-        logging_steps = 100
+        logging_steps = 25
 
         ################################################################################
         # SFT parameters
@@ -153,12 +159,13 @@ class FinetuneLoader:
         self.max_seq_length = 4096
 
         # Pack multiple short examples in the same input sequence to increase efficiency
-        self.packing = True
+        self.packing = False
 
         # Load the entire model on the GPU 0
         device_map = {"": 0}
         # Load the model
         start_time = time.time()
+        
         ### Load model with QLoRA configuration
         compute_dtype = getattr(torch, bnb_4bit_compute_dtype)
 
@@ -243,26 +250,62 @@ class FinetuneLoader:
         gc.collect()
         return 0
     
-    def finetune_shard(self, size_per_shard=1024):
+    def finetune_step(self, finetuner, sub_dataset):
+        try:
+            finetuner.tune_step(sub_dataset,
+                                peft_config=self.peft_config, \
+                                training_arguments=self.training_arguments, \
+                                packing=self.packing, \
+                                max_seq_length=self.max_seq_length, \
+                                dataset_text_field="text")
+        except BaseException as err:
+            print('='*80)
+            print("ERROR with Finetune Loader with shard data in steps!!!\n")
+            print('='*80)
+            print("\n")
+            raise RuntimeError(err)
+        return 0
+    
+    def finetune_synthesize(self, size_per_shard=1000, shard_samples=10):
         start_time = time.time()
         finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
-        if len(self.formatted_dataset)<=2:
-            if len(self.formatted_dataset)==1:
-                self.formatted_dataset = self.formatted_dataset["train"]
-            else:
-                self.formatted_dataset = concatenate_datasets([self.formatted_dataset["train"], self.formatted_dataset["test"]])
+        num_shards = (len(self.formatted_dataset)+size_per_shard-1) // size_per_shard
+        print(f"===================Shard dataset {self.dataset_name.split('/')[-1]} into {num_shards} parts, using {shard_samples} parts for training==================")
+        for i in tqdm(range(min(num_shards, shard_samples))):
+            try:
+                sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=False, contiguous=False)
+                self.finetune_step(finetuner, sub_dataset=sub_dataset)
+                del sub_dataset
+                gc.collect()
+            except BaseException as err:
+                print('='*80)
+                print(f"ERROR with Finetune Loader with shard data at Step = {i}!!!\n")
+                print('='*80)
+                print("\n")
+                raise RuntimeError(err)
+
+        self.total_training_time = time.time() - start_time
+        self._log_time('Trainer Training time', self.total_training_time, log_file=self.shattered_logfile)
+        if num_shards>shard_samples:
+            self._log_time('Synthesize Total training time', self.total_training_time*(num_shards/shard_samples), log_file=self.shattered_logfile)
+        else:
+            self._log_time('Synthesize Total training time', self.total_training_time, log_file=self.shattered_logfile)
+        
+        return 0
+    
+    def finetune_shard(self, size_per_shard=1000):
+        start_time = time.time()
+        finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
         num_shards = (len(self.formatted_dataset)+size_per_shard-1) // size_per_shard
         print(f"===================Shard dataset {self.dataset_name.split('/')[-1]} into {num_shards} parts==================")
-        # 手动数据切片和训练
         try:
-            for i in range(0, num_shards):
-                sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=False)
-                finetuner.tune_step(sub_dataset,
-                                    peft_config=self.peft_config, \
-                                    training_arguments=self.training_arguments, \
-                                    packing=self.packing, \
-                                    max_seq_length=self.max_seq_length, \
-                                    dataset_text_field="text")
+            finetuner.tune_shard(formatted_dataset=self.formatted_dataset, \
+                                peft_config=self.peft_config, \
+                                training_arguments=self.training_arguments, \
+                                packing=self.packing, \
+                                max_seq_length=self.max_seq_length, \
+                                dataset_text_field="text", \
+                                num_shards=num_shards)
         except BaseException as err:
             print('='*80)
             print("ERROR with Finetune Loader with shard data!!!\n")
@@ -274,11 +317,8 @@ class FinetuneLoader:
         self._log_time('Trainer Training time', finetuner.training_time, log_file=self.shattered_logfile)
         self._log_time('Total training time', self.total_training_time, log_file=self.shattered_logfile)
         #del finetuner
-    
-    def finetune_iterable(self):
+        return 0
         
-        return
-          
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
     default_access_token = ConfigReader("access_token.txt").read_lines_without_comments()[0]
@@ -303,9 +343,10 @@ if __name__ == "__main__":
         ft_singleGPU.load_model()
         ft_singleGPU.load_dataset()
         #ft_singleGPU.finetune_all()
-        exit_code = ft_singleGPU.finetune_shard()
+        exit_code = ft_singleGPU.finetune_synthesize()
         if exit_code == 0:
-            print("Training Successful!!!")
+            print("Synthesize Training Successful!!!")
+            sys.exit(0)
         else:
             print("Training Failed!!!")
             sys.exit(1)
@@ -315,4 +356,5 @@ if __name__ == "__main__":
         print('='*80)
         print("\n")
         sys.exit(1)
+        
     sys.exit(0)
