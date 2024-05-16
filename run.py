@@ -23,6 +23,7 @@ def retry_finetuning(model, dataset, batch_size=4):
     print("\n")
     torch.cuda.empty_cache()
     syscode = os.system(f"poetry run python main.py {model} {dataset} {str(batch_size)}")
+    print(f"*************SYSTEM EXIT WITH CODE {syscode}*********************")
     if syscode == 0:
             print("Training Successful!!!")
     else:
