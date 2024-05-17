@@ -352,6 +352,7 @@ if __name__ == "__main__":
             sys.exit(1)
     except BaseException as err:
         print('='*80)
+        print(err)
         print("ERROR with Main Process!!!\n")
         print('='*80)
         print("\n")
