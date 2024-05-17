@@ -151,7 +151,7 @@ class FinetuneLoader:
         save_steps = 0
 
         # Log every X updates steps
-        logging_steps = 25
+        logging_steps = 50
 
         ################################################################################
         # SFT parameters
