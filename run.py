@@ -24,7 +24,7 @@ def retry_finetuning(model, dataset, batch_size=4):
     torch.cuda.empty_cache()
     syscode = os.system(f"poetry run python main.py {model} {dataset} {str(batch_size)}")
     if syscode == 0:
-            print("Training Successful!!!")
+        print("Training Successful!!!")
     else:
         torch.cuda.empty_cache()
         if batch_size<=1:
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     models = model_reader.read_lines_without_comments()
     datasets = dataset_reader.read_lines_without_comments()
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
-    batch_size = 16
+    batch_size = 4
     for model in tqdm(models, desc="Models"):
         for dataset in tqdm(datasets, desc="Datasets", leave=False):
             os.system('clear')
