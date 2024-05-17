@@ -266,7 +266,7 @@ class FinetuneLoader:
             raise RuntimeError(err)
         return 0
     
-    def finetune_synthesize(self, size_per_shard=1000, shard_samples=10):
+    def finetune_synthesize(self, size_per_shard=512, shard_samples=10):
         start_time = time.time()
         finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
         num_shards = (len(self.formatted_dataset)+size_per_shard-1) // size_per_shard
@@ -293,7 +293,7 @@ class FinetuneLoader:
         
         return 0
     
-    def finetune_shard(self, size_per_shard=1000):
+    def finetune_shard(self, size_per_shard=512):
         start_time = time.time()
         finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
         num_shards = (len(self.formatted_dataset)+size_per_shard-1) // size_per_shard
