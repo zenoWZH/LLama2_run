@@ -278,18 +278,18 @@ class FinetuneLoader:
         finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
         num_shards = (len(self.formatted_dataset)+size_per_shard-1) // size_per_shard
         print(f"===================Shard dataset {self.dataset_name.split('/')[-1]} into {num_shards} parts, using {shard_samples} parts for training==================")
-        for i in tqdm(range(min(num_shards, shard_samples))):
-            try:
+        try:
+            for i in tqdm(range(min(num_shards, shard_samples))):
                 sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=False, contiguous=False)
                 self.finetune_step(finetuner, sub_dataset=sub_dataset)
                 del sub_dataset
                 gc.collect()
-            except BaseException as err:
-                print('='*80)
-                print(f"ERROR with Finetune Loader with shard data at Step = {i}!!!\n")
-                print('='*80)
-                print("\n")
-                raise RuntimeError(err)
+        except BaseException as err:
+            print('='*80)
+            print(f"ERROR with Finetune Loader with shard data at Step = {i}!!!\n")
+            print('='*80)
+            print("\n")
+            raise RuntimeError(err)
 
         self.total_training_time = time.time() - start_time
         self._log_time('Trainer Training time', self.total_training_time, log_file=self.shattered_logfile)
