@@ -7,7 +7,7 @@ import torch
 import shutil
 
 def log_info(message, logfile):
-    if not log_file:
+    if not logfile:
         log_file = "templog.txt"
     print(message.strip())
     with open(log_file, "a+") as file:
