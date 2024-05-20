@@ -38,6 +38,13 @@ class FinetuneLoader:
         self.shattered_logfile = f"./results/logs/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_shard.log"
         self.output_file = f"{output_dir}+{model_short_name}_{dataset_short_name}_batch{self.batch_size}"
     
+    def _log_info(self, message, log_file=None):
+        if not log_file:
+            log_file = self.logfile
+        print(message.strip())
+        with open(log_file, "a+") as file:
+            file.write(message)
+            
     def _log_time(self, prefix, seconds, log_file=None):
         if not log_file:
             log_file = self.logfile
@@ -287,8 +294,10 @@ class FinetuneLoader:
         self.total_training_time = time.time() - start_time
         self._log_time('Trainer Training time', self.total_training_time, log_file=self.shattered_logfile)
         if num_shards>shard_samples:
-            self._log_time('Synthesize Total training time', self.total_training_time*(num_shards/shard_samples), log_file=self.shattered_logfile)
+            self._log_info(f"Total Data Shards = {num_shards}, is {(num_shards/shard_samples)} times of training time")
+            self._log_time('Synthesize Total training time', self.total_training_time*1.0*(num_shards/shard_samples), log_file=self.shattered_logfile)
         else:
+            self._log_info(f"Total Data Shards = {num_shards} < 10")
             self._log_time('Synthesize Total training time', self.total_training_time, log_file=self.shattered_logfile)
         
         return 0
@@ -345,13 +354,14 @@ if __name__ == "__main__":
         #ft_singleGPU.finetune_all()
         exit_code = ft_singleGPU.finetune_synthesize()
         if exit_code == 0:
-            print("Training Successful!!!")
+            print("Synthesize Training Successful!!!")
             sys.exit(0)
         else:
             print("Training Failed!!!")
             sys.exit(1)
     except BaseException as err:
         print('='*80)
+        print(err)
         print("ERROR with Main Process!!!\n")
         print('='*80)
         print("\n")

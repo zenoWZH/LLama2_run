@@ -6,6 +6,13 @@ from tqdm.auto import tqdm
 import torch
 import shutil
 
+def log_info(message, logfile):
+    if not log_file:
+        log_file = "templog.txt"
+    print(message.strip())
+    with open(log_file, "a+") as file:
+        file.write(message)
+    
 def clear_cache():
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
     torch.cuda.empty_cache()
@@ -18,14 +25,16 @@ def clear_cache():
 def retry_finetuning(model, dataset, batch_size=4):
     print('='*80)
     print("\n")
-    print(f"Try model {model.split('/')[-1]} on dataset {dataset.split('/')[-1]} again with batch_size = {batch_size}")
+    message = f"Try model {model.split('/')[-1]} on dataset {dataset.split('/')[-1]} again with batch_size = {batch_size}"
+    log_info(message, "./runninglog.txt")
     print('='*80)
     print("\n")
     torch.cuda.empty_cache()
     syscode = os.system(f"poetry run python main.py {model} {dataset} {str(batch_size)}")
-    print(f"*************SYSTEM EXIT WITH CODE {syscode}*********************")
+    message = f"*************SYSTEM EXIT WITH CODE {syscode}*********************"
+    log_info(message, "./runninglog.txt")
     if syscode == 0:
-            print("Training Successful!!!")
+        print("Training Successful!!!")
     else:
         torch.cuda.empty_cache()
         if batch_size<=1:
@@ -48,7 +57,8 @@ if __name__ == "__main__":
             os.system('clear')
             print('='*80)
             print("\n")
-            print(f"Training on model {model.split('/')[-1]} with dataset {dataset.split('/')[-1]} in batch_size = {batch_size}")
+            message = f"Training on model {model.split('/')[-1]} with dataset {dataset.split('/')[-1]} in batch_size = {batch_size}"
+            log_info(message, "./runninglog.txt")
             print('='*80)
             print("\n")
             syscode = os.system(f"poetry run python main.py {model} {dataset} {str(batch_size)}")
