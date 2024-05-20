@@ -38,6 +38,13 @@ class FinetuneLoader:
         self.shattered_logfile = f"./results/logs/{model_short_name}_{dataset_short_name}_batch{self.batch_size}_shard.log"
         self.output_file = f"{output_dir}+{model_short_name}_{dataset_short_name}_batch{self.batch_size}"
     
+    def _log_info(self, message, log_file=None):
+        if not log_file:
+            log_file = self.logfile
+        print(message.strip())
+        with open(log_file, "a+") as file:
+            file.write(message)
+            
     def _log_time(self, prefix, seconds, log_file=None):
         if not log_file:
             log_file = self.logfile
@@ -151,7 +158,7 @@ class FinetuneLoader:
         save_steps = 0
 
         # Log every X updates steps
-        logging_steps = 25
+        logging_steps = 50
 
         ################################################################################
         # SFT parameters
@@ -266,7 +273,7 @@ class FinetuneLoader:
             raise RuntimeError(err)
         return 0
     
-    def finetune_synthesize(self, size_per_shard=1000, shard_samples=10):
+    def finetune_synthesize(self, size_per_shard=512, shard_samples=10):
         start_time = time.time()
         finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
         num_shards = (len(self.formatted_dataset)+size_per_shard-1) // size_per_shard
@@ -287,13 +294,15 @@ class FinetuneLoader:
         self.total_training_time = time.time() - start_time
         self._log_time('Trainer Training time', self.total_training_time, log_file=self.shattered_logfile)
         if num_shards>shard_samples:
-            self._log_time('Synthesize Total training time', self.total_training_time*(num_shards/shard_samples), log_file=self.shattered_logfile)
+            self._log_info(f"Total Data Shards = {num_shards}, is {(num_shards/shard_samples)} times of training time")
+            self._log_time('Synthesize Total training time', self.total_training_time*1.0*(num_shards/shard_samples), log_file=self.shattered_logfile)
         else:
+            self._log_info(f"Total Data Shards = {num_shards} < 10")
             self._log_time('Synthesize Total training time', self.total_training_time, log_file=self.shattered_logfile)
         
         return 0
     
-    def finetune_shard(self, size_per_shard=1000):
+    def finetune_shard(self, size_per_shard=512):
         start_time = time.time()
         finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
         num_shards = (len(self.formatted_dataset)+size_per_shard-1) // size_per_shard
