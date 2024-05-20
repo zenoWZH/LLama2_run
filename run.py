@@ -12,6 +12,7 @@ def log_info(message, logfile):
     print(message.strip())
     with open(log_file, "a+") as file:
         file.write(message)
+        file.write("\n")
     
 def clear_cache():
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
