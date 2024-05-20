@@ -6,9 +6,7 @@ from tqdm.auto import tqdm
 import torch
 import shutil
 
-def log_info(message, logfile):
-    if not log_file:
-        log_file = "templog.txt"
+def log_info(message, log_file= "templog.txt"):
     print(message.strip())
     with open(log_file, "a+") as file:
         file.write(message)
