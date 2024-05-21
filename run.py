@@ -5,6 +5,7 @@ import sys
 from tqdm.auto import tqdm
 import torch
 import shutil
+import gc
 
 def log_info(message, log_file= "templog.txt"):
     print(message.strip())
@@ -19,6 +20,7 @@ def clear_cache():
     if os.path.exists(cache_dir):
         shutil.rmtree(cache_dir)
     os.makedirs(cache_dir, exist_ok=True)
+    gc.collect()
     print("Cache cleared") 
 
 def retry_finetuning(model, dataset, batch_size=4):
@@ -54,6 +56,7 @@ if __name__ == "__main__":
     for model in tqdm(models, desc="Models"):
         for dataset in tqdm(datasets, desc="Datasets", leave=False):
             os.system('clear')
+            gc.collect()
             print('='*80)
             print("\n")
             message = f"Training on model {model.split('/')[-1]} with dataset {dataset.split('/')[-1]} in batch_size = {batch_size}"
