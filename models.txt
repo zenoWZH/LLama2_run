@@ -16,9 +16,9 @@ meta-llama/Meta-Llama-3-8B
 mosaicml/mpt-30b
 
 #Falcon-40b
-#tiiuae/falcon-40b
+tiiuae/falcon-40b
 
 #Mistral series
 #mistralai/Mistral-7B-Instruct-v0.2
-#mistralai/Mixtral-8x7B-Instruct-v0.1
+mistralai/Mixtral-8x7B-Instruct-v0.1
 #mistralai/Mixtral-8x22B-v0.1
