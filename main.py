@@ -280,7 +280,7 @@ class FinetuneLoader:
         print(f"===================Shard dataset {self.dataset_name.split('/')[-1]} into {num_shards} parts, using {shard_samples} parts for training==================")
         try:
             for i in tqdm(range(min(num_shards, shard_samples))):
-                sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=False, contiguous=False)
+                sub_dataset = self.formatted_dataset.shard(num_shards, i, keep_in_memory=True, contiguous=False)
                 self.finetune_step(finetuner, sub_dataset=sub_dataset)
                 del sub_dataset
                 gc.collect()
@@ -354,15 +354,15 @@ if __name__ == "__main__":
         #ft_singleGPU.finetune_all()
         exit_code = ft_singleGPU.finetune_synthesize()
         if exit_code == 0:
-            print("Synthesize Training Successful!!!")
-            sys.exit(0)
+            print("Training Successful!!!")
         else:
             print("Training Failed!!!")
-            sys.exit(1)
-    except BaseException as err:
+            sys.exit(-1)
+    except RuntimeError as err:
         print('='*80)
         print(err)
-        print("ERROR with Main Process!!!\n")
+        print("UNEXPECTED Runtime Error with Main Process!!!\n")
         print('='*80)
         print("\n")
+        raise RuntimeError(err)
         sys.exit(1)

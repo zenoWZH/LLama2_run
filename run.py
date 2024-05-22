@@ -52,7 +52,7 @@ if __name__ == "__main__":
     models = model_reader.read_lines_without_comments()
     datasets = dataset_reader.read_lines_without_comments()
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     batch_size = 2
     for model in tqdm(models, desc="Models"):
         for dataset in tqdm(datasets, desc="Datasets", leave=False):
