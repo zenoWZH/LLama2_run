@@ -13,10 +13,10 @@
 #meta-llama/Meta-Llama-3-8B
 
 #MPT-30b
-#mosaicml/mpt-30b
+mosaicml/mpt-30b
 
 #Falcon-40b
-#tiiuae/falcon-40b
+tiiuae/falcon-40b
 
 #Mistral series
 #mistralai/Mistral-7B-Instruct-v0.2

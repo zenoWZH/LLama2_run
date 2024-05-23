@@ -1,9 +1,9 @@
 # guanaco 1k, 10k
 #mlabonne/guanaco-llama2-1k
-timdettmers/openassistant-guanaco
+#timdettmers/openassistant-guanaco
 
 # 15k
-databricks/databricks-dolly-15k
+#databricks/databricks-dolly-15k
 
 # 50k
 m-a-p/COIG-CQIA
