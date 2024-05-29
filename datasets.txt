@@ -1,19 +1,19 @@
 # guanaco 1k, 10k
 #mlabonne/guanaco-llama2-1k
-timdettmers/openassistant-guanaco
+#timdettmers/openassistant-guanaco
 
 # 15k
-databricks/databricks-dolly-15k
+#databricks/databricks-dolly-15k
 
 # 50k
 m-a-p/COIG-CQIA
 
 # mmlu 100k
-cais/mmlu
+#cais/mmlu
 
 
 # bellegroup 0.5M, 1M, 3.5M
-BelleGroup/train_0.5M_CN
+#BelleGroup/train_0.5M_CN
 #BelleGroup/train_1M_CN
 #BelleGroup/train_2M_CN
 #BelleGroup/train_3.5M_CN
