@@ -1,0 +1,36 @@
+{
+    "QLoRA_parameters": {
+        "lora_r": 64,
+        "lora_alpha": 16,
+        "lora_dropout": 0.05
+    },
+    "bitsandbytes_parameters": {
+        "use_4bit": true,
+        "bnb_4bit_compute_dtype": "float16",
+        "bnb_4bit_quant_type": "nf4",
+        "use_nested_quant": false
+    },
+    "TrainingArguments_parameters": {
+        "num_train_epochs": 3,
+        "fp16": false,
+        "bf16": true,
+        "per_device_train_batch_size": 8,
+        "per_device_eval_batch_size": 8,
+        "gradient_accumulation_steps": 1,
+        "gradient_checkpointing": true,
+        "max_grad_norm": 0.3,
+        "learning_rate": 0.0002,
+        "weight_decay": 0.001,
+        "optim": "paged_adamw_32bit",
+        "lr_scheduler_type": "cosine",
+        "max_steps": -1,
+        "warmup_ratio": 0.03,
+        "group_by_length": false,
+        "save_steps": 0,
+        "logging_steps": 50
+    },
+    "SFT_parameters": {
+        "max_seq_length": 4096,
+        "packing": false
+    }
+}

@@ -12,6 +12,7 @@ from transformers import (
     TrainingArguments
 )
 
+import json
 import os
 import sys
 from tqdm.auto import tqdm
@@ -81,109 +82,114 @@ class FinetuneLoader:
         self.formatted_dataset = self.formatted_dataset.shuffle()
         self.data_loading_time = time.time() - start_time
         self._log_time('Dataset preparing time', self.data_loading_time)
+    
+    def load_config(self, config_file: str):
+        with open(config_file, 'r') as f:
+            self.config = json.load(f)
         
-    def load_model(self):
         ################################################################################
         # QLoRA parameters
         # LoRA attention dimension
-        lora_r = 64
+        self.lora_r = self.config["QLoRA_parameters"]["lora_r"]
 
         # Alpha parameter for LoRA scaling
-        lora_alpha = 16
+        self.lora_alpha = self.config["QLoRA_parameters"]["lora_alpha"]
 
         # Dropout probability for LoRA layers
-        lora_dropout = 0.05
+        self.lora_dropout = self.config["QLoRA_parameters"]["lora_dropout"]
 
         ################################################################################
         # bitsandbytes parameters
         # Activate 4-bit precision base model loading
-        use_4bit = True
+        self.use_4bit = self.config["bitsandbytes_parameters"]["use_4bit"]
 
         # Compute dtype for 4-bit base models
-        bnb_4bit_compute_dtype = "float16"
+        self.bnb_4bit_compute_dtype = self.config["bitsandbytes_parameters"]["bnb_4bit_compute_dtype"]
 
         # Quantization type (fp4 or nf4)
-        bnb_4bit_quant_type = "nf4"
+        self.bnb_4bit_quant_type = self.config["bitsandbytes_parameters"]["bnb_4bit_quant_type"]
 
         # Activate nested quantization for 4-bit base models (double quantization)
-        use_nested_quant = False
+        self.use_nested_quant = self.config["bitsandbytes_parameters"]["use_nested_quant"]
 
         ################################################################################
         # TrainingArguments parameters
         # Number of training epochs
-        num_train_epochs = self.training_epochs
+        self.num_train_epochs = self.config["TrainingArguments_parameters"]["num_train_epochs"]
 
         # Enable fp16/bf16 training (set bf16 to True with an A100)
-        fp16 = False
-        bf16 = True
+        self.fp16 = self.config["TrainingArguments_parameters"]["fp16"]
+        self.bf16 = self.config["TrainingArguments_parameters"]["bf16"]
 
         # Batch size per GPU for training
-        per_device_train_batch_size = batch_size
+        self.per_device_train_batch_size = self.config["TrainingArguments_parameters"]["per_device_train_batch_size"]
 
         # Batch size per GPU for evaluation
-        per_device_eval_batch_size = batch_size
+        self.per_device_eval_batch_size = self.config["TrainingArguments_parameters"]["per_device_eval_batch_size"]
 
         # Number of update steps to accumulate the gradients for
-        gradient_accumulation_steps = 1
+        self.gradient_accumulation_steps = self.config["TrainingArguments_parameters"]["gradient_accumulation_steps"]
 
         # Enable gradient checkpointing
-        gradient_checkpointing = True
+        self.gradient_checkpointing = self.config["TrainingArguments_parameters"]["gradient_checkpointing"]
 
         # Maximum gradient normal (gradient clipping)
-        max_grad_norm = 0.3
+        self.max_grad_norm = self.config["TrainingArguments_parameters"]["max_grad_norm"]
 
         # Initial learning rate (AdamW optimizer)
-        learning_rate = 2e-4
+        self.learning_rate = self.config["TrainingArguments_parameters"]["learning_rate"]
 
         # Weight decay to apply to all layers except bias/LayerNorm weights
-        weight_decay = 0.001
+        self.weight_decay = self.config["TrainingArguments_parameters"]["weight_decay"]
 
         # Optimizer to use
-        optim = "paged_adamw_32bit"
+        self.optim = self.config["TrainingArguments_parameters"]["optim"]
 
         # Learning rate schedule
-        lr_scheduler_type = "cosine"
+        self.lr_scheduler_type = self.config["TrainingArguments_parameters"]["lr_scheduler_type"]
 
         # Number of training steps (overrides num_train_epochs)
-        max_steps = -1
+        self.max_steps = self.config["TrainingArguments_parameters"]["max_steps"]
 
         # Ratio of steps for a linear warmup (from 0 to learning rate)
-        warmup_ratio = 0.03
+        self.warmup_ratio = self.config["TrainingArguments_parameters"]["warmup_ratio"]
 
         # Group sequences into batches with same length
         # Saves memory and speeds up training considerably
-        group_by_length = False
+        self.group_by_length = self.config["TrainingArguments_parameters"]["group_by_length"]
 
         # Save checkpoint every X updates steps
-        save_steps = 0
+        self.save_steps = self.config["TrainingArguments_parameters"]["save_steps"]
 
         # Log every X updates steps
-        logging_steps = 50
+        self.logging_steps = self.config["TrainingArguments_parameters"]["logging_steps"]
 
         ################################################################################
         # SFT parameters
         # Maximum sequence length to use
-        self.max_seq_length = 4096
+        self.max_seq_length = self.config["SFT_parameters"]["max_seq_length"]
 
         # Pack multiple short examples in the same input sequence to increase efficiency
-        self.packing = False
-
+        self.packing = self.config["SFT_parameters"]["packing"]
+        
+    def load_model(self):       
+        self.load_config("./training_params.json")
         # Load the entire model on the GPU 0
         device_map = {"": 0}
         # Load the model
         start_time = time.time()
         
         ### Load model with QLoRA configuration
-        compute_dtype = getattr(torch, bnb_4bit_compute_dtype)
+        compute_dtype = getattr(torch, self.bnb_4bit_compute_dtype)
 
         bnb_config = BitsAndBytesConfig(
-            load_in_4bit=use_4bit,
-            bnb_4bit_quant_type=bnb_4bit_quant_type,
+            load_in_4bit=self.use_4bit,
+            bnb_4bit_quant_type=self.bnb_4bit_quant_type,
             bnb_4bit_compute_dtype=compute_dtype,
-            bnb_4bit_use_double_quant=use_nested_quant,
+            bnb_4bit_use_double_quant=self.use_nested_quant,
         )
         # Check GPU compatibility with bfloat16
-        if compute_dtype == torch.float16 and use_4bit:
+        if compute_dtype == torch.float16 and self.use_4bit:
             major, _ = torch.cuda.get_device_capability()
             if major >= 8:
                 print("Your GPU supports bfloat16: accelerate training with bf16=True")
@@ -193,16 +199,17 @@ class FinetuneLoader:
             model_name,
             quantization_config=bnb_config,
             device_map=device_map,
-            token=access_token
+            trust_remote_code=True,
+            #token=self.access_token
         )
         self.model.config.use_cache = False
         self.model.config.pretraining_tp = 1
 
         # Load LoRA configuration
         self.peft_config = LoraConfig(
-            lora_alpha=lora_alpha,
-            lora_dropout=lora_dropout,
-            r=lora_r,
+            lora_alpha=self.lora_alpha,
+            lora_dropout=self.lora_dropout,
+            r=self.lora_r,
             bias="none",
             task_type="CAUSAL_LM",
             target_modules=[
@@ -223,22 +230,22 @@ class FinetuneLoader:
         # Set training parameters
         self.training_arguments = TrainingArguments(
             output_dir=self.output_dir,
-            num_train_epochs=num_train_epochs,
-            per_device_train_batch_size=per_device_train_batch_size,
-            per_device_eval_batch_size=per_device_eval_batch_size,
-            gradient_accumulation_steps=gradient_accumulation_steps,
-            optim=optim,
-            save_steps=save_steps,
-            logging_steps=logging_steps,
-            learning_rate=learning_rate,
-            weight_decay=weight_decay,
-            fp16=fp16,
-            bf16=bf16,
-            max_grad_norm=max_grad_norm,
-            max_steps=max_steps,
-            warmup_ratio=warmup_ratio,
-            group_by_length=group_by_length,
-            lr_scheduler_type=lr_scheduler_type,
+            num_train_epochs=self.num_train_epochs,
+            per_device_train_batch_size=self.per_device_train_batch_size,
+            per_device_eval_batch_size=self.per_device_eval_batch_size,
+            gradient_accumulation_steps=self.gradient_accumulation_steps,
+            optim=self.optim,
+            save_steps=self.save_steps,
+            logging_steps=self.logging_steps,
+            learning_rate=self.learning_rate,
+            weight_decay=self.weight_decay,
+            fp16=self.fp16,
+            bf16=self.bf16,
+            max_grad_norm=self.max_grad_norm,
+            max_steps=self.max_steps,
+            warmup_ratio=self.warmup_ratio,
+            group_by_length=self.group_by_length,
+            lr_scheduler_type=self.lr_scheduler_type,
             logging_dir=self.output_dir+"/logs",
         )
 
