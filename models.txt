@@ -1,5 +1,5 @@
 # Tiny llama 1b
-TinyLlama/TinyLlama-1.1B-Chat-v1.0
+#TinyLlama/TinyLlama-1.1B-Chat-v1.0
 
 #gemma 2b
 #google/gemma-2b
@@ -10,7 +10,7 @@ TinyLlama/TinyLlama-1.1B-Chat-v1.0
 #Llama series
 #NousResearch/Llama-2-7b-chat-hf
 #NousResearch/Llama-2-13b-chat-hf
-#meta-llama/Meta-Llama-3-8B
+meta-llama/Meta-Llama-3-8B
 
 #MPT-30b
 #mosaicml/mpt-30b
@@ -19,6 +19,6 @@ TinyLlama/TinyLlama-1.1B-Chat-v1.0
 #tiiuae/falcon-40b
 
 #Mistral series
-#mistralai/Mistral-7B-Instruct-v0.2
-#mistralai/Mixtral-8x7B-Instruct-v0.1
+mistralai/Mistral-7B-Instruct-v0.2
+mistralai/Mixtral-8x7B-Instruct-v0.1
 #mistralai/Mixtral-8x22B-v0.1

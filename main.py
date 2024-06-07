@@ -174,9 +174,9 @@ class FinetuneLoader:
         self.packing = self.config["SFT_parameters"]["packing"]
         
     def load_model(self):
-               
         self.load_config("./training_params.json")
-        # Load the entire model on the GPU 0
+        # Load the entire model automatically on the GPU
+        low_cpu_mem_usage=True
         device_map = "auto"
         # Load the model
         start_time = time.time()
@@ -201,8 +201,10 @@ class FinetuneLoader:
             self.model_name,
             quantization_config=bnb_config,
             device_map=device_map,
+            low_cpu_mem_usage=low_cpu_mem_usage,
             trust_remote_code=True,
-            token=self.access_token
+            token=self.access_token,
+
         )
         self.model.config.use_cache = False
         self.model.config.pretraining_tp = 1
@@ -225,7 +227,7 @@ class FinetuneLoader:
                 "lm_head",
                 ],
         )
-        #self.peft_model = get_peft_model(self.model, self.peft_config)
+        
         self.model_loading_time = time.time() - start_time
         self._log_time('Model loading time', self.model_loading_time)
         
