@@ -2,6 +2,7 @@
 from LLMFinetuner import LLMFinetuner
 from ConfigReader import ConfigReader
 from DatasetFormatter import DatasetFormatter
+from accelerate import Accelerator
 
 from datasets import load_dataset, DatasetDict, concatenate_datasets
 from peft import LoraConfig, get_peft_model
@@ -172,10 +173,11 @@ class FinetuneLoader:
         # Pack multiple short examples in the same input sequence to increase efficiency
         self.packing = self.config["SFT_parameters"]["packing"]
         
-    def load_model(self):       
+    def load_model(self):
+               
         self.load_config("./training_params.json")
         # Load the entire model on the GPU 0
-        device_map = {"": 0}
+        device_map = "auto"
         # Load the model
         start_time = time.time()
         
@@ -196,11 +198,11 @@ class FinetuneLoader:
         
         # Load base model
         self.model = AutoModelForCausalLM.from_pretrained(
-            model_name,
+            self.model_name,
             quantization_config=bnb_config,
             device_map=device_map,
             trust_remote_code=True,
-            #token=self.access_token
+            token=self.access_token
         )
         self.model.config.use_cache = False
         self.model.config.pretraining_tp = 1
@@ -249,13 +251,12 @@ class FinetuneLoader:
             logging_dir=self.output_dir+"/logs",
         )
 
-    def finetune_all(self):
+    def finetune_all_multiGPU(self):
         start_time = time.time()
-        finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile)
+        finetuner = LLMFinetuner(self.model, self.tokenizer, self.batch_size, log_file=self.logfile, dataset=self.formatted_dataset)
         self.data_loading_time = time.time() - start_time
         self._log_time('Data split time', self.data_loading_time)
-        finetuner.tune(self.formatted_dataset,
-                        peft_config=self.peft_config, \
+        finetuner.tune_all_multiGPU(peft_config=self.peft_config, \
                         training_arguments=self.training_arguments, \
                         packing=self.packing, \
                         max_seq_length=self.max_seq_length, \
@@ -358,10 +359,10 @@ if __name__ == "__main__":
         ft_singleGPU = FinetuneLoader(model_name, dataset_name, access_token, batch_size)
         ft_singleGPU.load_model()
         ft_singleGPU.load_dataset()
-        #ft_singleGPU.finetune_all()
-        exit_code = ft_singleGPU.finetune_synthesize()
+        exit_code = ft_singleGPU.finetune_all_multiGPU()
+        #exit_code = ft_singleGPU.finetune_synthesize()
         if exit_code == 0:
-            print("Synthesize Training Successful!!!")
+            print("Exit Code 0, Training Successful!!!")
             sys.exit(0)
         else:
             print("Training Failed!!!")

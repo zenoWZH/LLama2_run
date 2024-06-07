@@ -1,2 +1,2 @@
 # This is my personal token, change if you have access to specific model
-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
+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

@@ -6,17 +6,21 @@ import os
 import torch
 
 from trl import SFTTrainer
+from accelerate import Accelerator
 import asyncio
 import gc
 
 class LLMFinetuner:
-    def __init__(self, model, tokenizer, access_token=None, batch_size=4, log_file="./log_temp.txt", **training_args):
+    def __init__(self, model, tokenizer, access_token=None, batch_size=4, log_file="./log_temp.txt", dataset=None, **training_args):
         # Output directory where the model predictions and checkpoints will be stored
         self.model = model
         self.batch_size = batch_size
         self.log_filename = log_file
         self.trainer = None
-        self.dataset = None
+        if dataset:
+            self.split_dataset(dataset)
+        else:
+            self.dataset = None
         self.step=0
         self.tokenizer = tokenizer
         self.max_seq_length = self.tokenizer.model_max_length
@@ -65,14 +69,18 @@ class LLMFinetuner:
             })
         else:
             self.dataset = formatted_dataset
+        return self.dataset
         
-    def tune(self, peft_config, training_arguments, packing, max_seq_length, dataset_text_field):
+    def tune_all_multiGPU(self, peft_config, training_arguments, packing, max_seq_length, dataset_text_field):
         if not self.dataset:
             raise RuntimeError("Dataset not loaded")
         
         start_time = time.time()
         # Set supervised fine-tuning parameters
         try:
+            training_arguments.deepspeed = "ds_config.json"
+            accelerator = Accelerator()
+            print("Accelerator initialized, using all GPUs for training")
             self.trainer = SFTTrainer(
                 model=self.model,
                 peft_config=peft_config,
@@ -80,11 +88,11 @@ class LLMFinetuner:
                 eval_dataset=self.dataset['test'],
                 args=training_arguments,
                 max_seq_length=max_seq_length,
-                tokenizer=tokenizer,
+                tokenizer=self.tokenizer,
                 packing=packing,
                 dataset_text_field=dataset_text_field,
             )
-        
+            accelerator.prepare(self.trainer)        
             self.trainer.train()
             self.training_time = time.time() - start_time
             self._log_time('Training time', self.training_time)
@@ -93,6 +101,7 @@ class LLMFinetuner:
             #del self.trainer
             gc.collect()
         except BaseException as err:
+            print(err)
             gc.collect()
             raise RuntimeError(err)
     
